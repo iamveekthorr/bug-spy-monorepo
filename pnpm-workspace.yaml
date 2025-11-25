@@ -1,6 +1,0 @@
-packages:
-  - 'packages/*'
-  - 'api'
-  - 'api-e2e'
-  - 'frontend'
-autoInstallPeers: true
