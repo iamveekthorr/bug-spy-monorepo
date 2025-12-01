@@ -1,7 +1,7 @@
 import type React from 'react';
 
-import Footer from '../Footer';
-import Header from '../Header';
+import Footer from '@/components/Footer';
+import Header from '@/components/Header';
 
 const Homepage = ({ children }: React.PropsWithChildren) => {
   return (
