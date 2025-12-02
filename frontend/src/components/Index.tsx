@@ -3,6 +3,12 @@ import { cn } from '@/lib/utils';
 import DashboardImage from '@/assets/dashboard.png';
 import DownloadCard from '@/assets/download-card.png';
 import BackgroundImage from '@/assets/99faf793ab4bd9f418a92e270a2fb359015560d9.jpg';
+import ErrorCat from '@/assets/error-category.png';
+import ScheduleTest from '@/assets/schedule-tests.png';
+import ShareableReports from '@/assets/share-report.png';
+import ScreenShots from '@/assets/test-completed.png';
+
+import { Settings, NetworkIcon, ChartLineIcon } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
 import {
@@ -16,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 
 import Homepage from '@/components/layout/Homepage.layout';
+import PlatformCard from '@/components/home/PlatformCard.home';
 
 const Index = () => {
   return (
@@ -112,25 +119,139 @@ const Index = () => {
             </p>
 
             <div className="flex justify-between gap-5 mt-7">
-              <div className="w-[400px] h-[230px] flex flex-col justify-center align-center text-center text-sm p-3">
+              <PlatformCard>
+                <div className="flex justify-center mb-5">
+                  <div className="bg-white/10 p-3 rounded-sm">
+                    <Settings />
+                  </div>
+                </div>
                 <h3>Easy Automated Testing:</h3>
                 <p>Run instant or scheduled tests without setup.</p>
-              </div>
-              <div className="w-[400px] h-[230px] flex flex-col justify-center text-center  align-center text-sm p-3">
+              </PlatformCard>
+              <PlatformCard>
+                <div className="flex justify-center mb-5">
+                  <div className="bg-white/10 p-3 rounded-sm">
+                    <ChartLineIcon />
+                  </div>
+                </div>
+
                 <h3>Actionable Insights:</h3>
                 <p>
                   Categorized error reports, performance scores, and exports.
                 </p>
-              </div>
-              <div className="w-[400px] h-[230px] flex flex-col justify-center align-center text-center text-sm p-3">
+              </PlatformCard>
+              <PlatformCard>
+                <div className="flex justify-center mb-5">
+                  <div className="bg-white/10 p-3 rounded-sm">
+                    <NetworkIcon />
+                  </div>
+                </div>
+
                 <h3>Scalable for Teams:</h3>
                 <p>From freelancers to enterprise QA, BugSpy grows with you</p>
-              </div>
+              </PlatformCard>
             </div>
           </div>
         </div>
       </section>
-      <section>features overview&nbsp; </section>
+      <section>
+        <section className={cn('container m-auto pt-[32px] px-[75px] mt-10')}>
+          <div className="flex justify-center flex-col text-center mb-20">
+            <h2 className="text-4xl capitalize font-bold mb-3">
+              features overview
+            </h2>
+            <p>
+              Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+              vulputate libero
+            </p>
+          </div>
+          <div className="flex mt-10 mb-10 items-center py-20">
+            <div className="me-auto">
+              <h3 className="text-2xl font-bold mb-3">Error Categorization</h3>
+              <p className="text-black/70 w-[350px]">
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.
+              </p>
+            </div>
+            <div className="w-[650px] h-[350px] border overflow-hidden rounded-sm shadow-xl">
+              <img
+                src={ErrorCat}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+          <div className="flex mt-10 mb-10 items-center py-20">
+            <div className="w-[650px] h-[350px] border overflow-hidden rounded-sm shadow-xl me-auto">
+              <img
+                src={ScreenShots}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold mb-3">
+                Full-page Screenshots.
+              </h3>
+              <p className="text-black/70 w-[350px]">
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex mt-10 mb-10  items-center py-20">
+            <div className="me-auto">
+              <h3 className="text-2xl font-bold mb-3">Exportable Reports.</h3>
+              <p className="text-black/70 w-[350px]">
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.
+              </p>
+            </div>
+            <div className="w-[650px] h-[350px] border overflow-hidden rounded-sm shadow-xl">
+              <img
+                src={ShareableReports}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+          <div className="flex mt-10 mb-10  items-center py-20">
+            <div className="w-[650px] h-[350px] border overflow-hidden rounded-sm shadow-xl me-auto">
+              <img
+                src={ScheduleTest}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold mb-3">
+                Scheduled tests & history (Pro+)
+              </h3>
+              <p className="text-black/70 w-[350px]">
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.
+                Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+                vulputate libero et velit interdum, ac aliquet odio mattis.{' '}
+              </p>
+            </div>
+          </div>
+        </section>
+      </section>
       <section>how bugspy works &nbsp; </section>
     </Homepage>
   );
