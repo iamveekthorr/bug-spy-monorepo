@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 
 import Homepage from '@/components/layout/Homepage.layout';
 import PlatformCard from '@/components/home/PlatformCard.home';
+import HowItWorksCard from './home/HowItWorksCard.home';
 
 const Index = () => {
   return (
@@ -246,13 +247,55 @@ const Index = () => {
                 Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
                 vulputate libero et velit interdum, ac aliquet odio mattis.
                 Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
-                vulputate libero et velit interdum, ac aliquet odio mattis.{' '}
+                vulputate libero et velit interdum, ac aliquet odio mattis.
               </p>
             </div>
           </div>
         </section>
       </section>
-      <section>how bugspy works &nbsp; </section>
+      <section className="bg-slate-900 text-white">
+        <section className={cn('container m-auto py-[50px] px-[75px] mt-10')}>
+          <div className="text-center">
+            <h3 className="capitalize font-bold text-4xl">how bugspy works</h3>
+            <p className="mt-3">
+              Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+              vulputate libero
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-8 place-items-center mt-10">
+            <HowItWorksCard
+              image={ScheduleTest}
+              digit="01"
+              title="Enter a website URL"
+              subTitle="(UI, console, network, performance)."
+              altText="nothing"
+            />
+
+            <HowItWorksCard
+              image={ScheduleTest}
+              digit="02"
+              title="Enter a website URL"
+              subTitle="(UI, console, network, performance)."
+              altText="nothing"
+            />
+            <HowItWorksCard
+              image={ScheduleTest}
+              digit="03"
+              title="Enter a website URL"
+              subTitle="(UI, console, network, performance)."
+              altText="nothing"
+            />
+            <HowItWorksCard
+              image={ScheduleTest}
+              digit="04"
+              title="Enter a website URL"
+              subTitle="(UI, console, network, performance)."
+              altText="nothing"
+            />
+          </div>
+        </section>
+      </section>
     </Homepage>
   );
 };
