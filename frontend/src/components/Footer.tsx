@@ -22,7 +22,8 @@ const Footer = () => {
                 <Link to={'/privacy-policy'}>privacy policy</Link>
               </li>
             </ul>
-            <Button variant="ghost" className="capitalize">
+
+            <Button variant="outline" className="capitalize">
               login
             </Button>
           </div>

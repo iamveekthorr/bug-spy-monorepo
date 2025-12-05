@@ -7,6 +7,7 @@ import ErrorCat from '@/assets/error-category.png';
 import ScheduleTest from '@/assets/schedule-tests.png';
 import ShareableReports from '@/assets/share-report.png';
 import ScreenShots from '@/assets/test-completed.png';
+import DashboardScreenshot from '@/assets/dashboard-screenshot.png';
 
 import { Settings, NetworkIcon, ChartLineIcon } from 'lucide-react';
 
@@ -295,6 +296,31 @@ const Index = () => {
             />
           </div>
         </section>
+      </section>
+
+      <section className={cn('container m-auto py-[50px] px-[75px] mt-10')}>
+        <div className="bg-blue-600 overflow-hidden rounded-xl flex ps-10 h-90 text-white items-center relative">
+          <div className="w-1/2">
+            <h2 className="text-5xl font-bold">
+              <span className="block mb-2">Sign up to unlock </span>
+              <span className="block">full details</span>
+            </h2>
+            <p className="my-3">
+              Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
+              vulputate libero et velit interdum.
+            </p>
+            <Button className="bg-white text-black/70 px-10 py-5">
+              Sign up
+            </Button>
+          </div>
+          <div className="absolute bottom-0 top-8 right-0 isolate">
+            <img
+              src={DashboardScreenshot}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
       </section>
     </Homepage>
   );
