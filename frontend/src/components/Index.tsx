@@ -1,4 +1,6 @@
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 import DashboardImage from '@/assets/dashboard.png';
 import DownloadCard from '@/assets/download-card.png';
@@ -24,11 +26,36 @@ import { Button } from '@/components/ui/button';
 
 import Homepage from '@/components/layout/Homepage.layout';
 import PlatformCard from '@/components/home/PlatformCard.home';
-import HowItWorksCard from './home/HowItWorksCard.home';
+import HowItWorksCard from '@/components/home/HowItWorksCard.home';
+import Modal from '@/components/Modal';
 
 const Index = () => {
+  const [loading, setLoading] = useState(false);
+
+  const { register, handleSubmit } = useForm();
+
+  const [open, toggleOpen] = useState(false);
+
+  // useEffect(() => {
+  //   const source = new EventSource(
+  //     'http://localhost:3000/api/v1/capture-metrics/single?url=https://www.udemy.com',
+  //   );
+  //
+  //   source.onmessage = (event: MessageEvent) => {
+  //     console.log(event.data);
+  //   };
+  //
+  //   source.onerror = () => source.close();
+  // });
+
   return (
     <Homepage>
+      <Modal isOpen={open} onClose={() => toggleOpen((prev) => !prev)}>
+        <div>
+          <p onClick={() => toggleOpen((prev) => !prev)}>this is a modal</p>
+        </div>
+      </Modal>
+
       <section className={cn('container m-auto pt-[32px] px-[75px]')}>
         <div className={cn('flex justify-center flex-col items-center')}>
           <h1
@@ -36,9 +63,11 @@ const Index = () => {
               'capitalize text-[48px] font-bold w-4/5 text-center mb-10',
             )}
           >
-            automated website{' '}
-            <span className={cn('text-blue-600 capitalize')}>Testing.</span>
-            Faster.smarter.better.
+            <span className="block">automated website </span>
+            <span className="block">
+              <span className={cn('text-blue-600 capitalize')}>Testing.</span>
+              Faster.smarter.better.
+            </span>
           </h1>
 
           <div className="text-center">
@@ -73,7 +102,16 @@ const Index = () => {
                   </SelectContent>
                 </Select>
 
-                <Button className={cn('h-[100%]!')}>start test</Button>
+                <Button
+                  className={cn('h-[100%]!')}
+                  onClick={() => {
+                    console.log('something happend', open);
+                    toggleOpen(true);
+                    // setLoading((prev) => !prev);
+                  }}
+                >
+                  start test
+                </Button>
               </div>
             </div>
 
@@ -97,7 +135,7 @@ const Index = () => {
       <section className="relative text-white">
         <div
           className={cn(
-            'relative after:absolute after:bg-black/70 after:z-10 after:inset-0 ',
+            'relative after:absolute after:bg-black/70 after:inset-0 ',
             "after:content-[''] h-[781px]",
           )}
         >
@@ -108,7 +146,7 @@ const Index = () => {
           />
         </div>
 
-        <div className="absolute isolate z-20 inset-50">
+        <div className="absolute inset-50">
           <div className={cn('container m-auto')}>
             <h2 className="text-3xl font-bold">What is BugSpy?</h2>
             <p className="font-normal w-[650px] mt-7">
