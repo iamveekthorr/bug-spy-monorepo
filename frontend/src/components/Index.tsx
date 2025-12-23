@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm, type SubmitHandler } from 'react-hook-form';
 
 import DashboardImage from '@/assets/dashboard.png';
 import DownloadCard from '@/assets/download-card.png';
@@ -23,30 +23,59 @@ import {
   SelectTrigger,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import {
+  Field,
+  FieldContent,
+  FieldGroup,
+  FieldSet,
+} from '@/components/ui/field';
 
 import Homepage from '@/components/layout/Homepage.layout';
 import PlatformCard from '@/components/home/PlatformCard.home';
 import HowItWorksCard from '@/components/home/HowItWorksCard.home';
 import Modal from '@/components/Modal';
+import { SelectLabel } from '@radix-ui/react-select';
+
+interface IURLTestData {
+  url: string;
+  testType: string;
+  deviceType: string;
+}
 
 const Index = () => {
   const [loading, setLoading] = useState(false);
 
-  const { register, handleSubmit } = useForm();
+  const form = useForm<IURLTestData>({
+    defaultValues: {
+      url: '',
+      testType: '',
+      deviceType: '',
+    },
+  });
 
   const [open, toggleOpen] = useState(false);
 
-  // useEffect(() => {
-  //   const source = new EventSource(
-  //     'http://localhost:3000/api/v1/capture-metrics/single?url=https://www.udemy.com',
-  //   );
-  //
-  //   source.onmessage = (event: MessageEvent) => {
-  //     console.log(event.data);
-  //   };
-  //
-  //   source.onerror = () => source.close();
-  // });
+  // define regex pattern
+  const REGEX_PATTERN = /([\w-]+\.)+[\w-]+(\/[\w-]*)*$/gm;
+
+  // TODO: - Taks left before moving to homepage
+  // Get the strings from the input fields
+  // Validate them - 1) url (regex), prefix the url with 'http://'
+  // 2) Validate test type
+  // 3) Make button disabled when it's page is loading
+  // 4) display result in the modal
+
+  const onSubmit: SubmitHandler<IURLTestData> = (data: IURLTestData) => {
+    toggleOpen(true);
+    console.log(data, 'data...');
+    const source = new EventSource('https://www.' + data.url);
+
+    source.onmessage = (event: MessageEvent) => {
+      console.log(event.data);
+    };
+
+    source.onerror = () => source.close();
+  };
 
   return (
     <Homepage>
@@ -63,11 +92,12 @@ const Index = () => {
               'capitalize text-[48px] font-bold w-4/5 text-center mb-10',
             )}
           >
-            <span className="block">automated website </span>
             <span className="block">
+              automated website{' '}
               <span className={cn('text-blue-600 capitalize')}>Testing.</span>
-              Faster.smarter.better.
+              Faster.
             </span>
+            <span className="block">smarter.better.</span>
           </h1>
 
           <div className="text-center">
@@ -80,40 +110,83 @@ const Index = () => {
               preview what BugSpy can do.
             </p>
 
-            <div className="flex justify-center gap-3 mb-5 items-stretch">
-              <div className={cn('w-2/5 h-[48px]')}>
-                <Input
-                  type="text"
-                  placeholder="https://example.com"
-                  className={cn('h-[100%]')}
-                  id="url"
-                  name="url_input"
-                />
-              </div>
-              <div className={cn('gap-3 flex')}>
-                <Select>
-                  <SelectTrigger className={cn('w-[180px] h-[100%]!')}>
-                    <SelectValue placeholder="quick test" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="item 1">item 1</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+            <form
+              className="gap-3 flex h-12 justify-center mb-5 items-stretch"
+              onSubmit={form.handleSubmit(onSubmit)}
+            >
+              <Controller
+                name="url"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid} className="w-2/5">
+                    <Input
+                      {...field}
+                      type="text"
+                      placeholder="https://example.com"
+                      className={cn('h-[100%]')}
+                      id="url"
+                      name="url_input"
+                    />
+                  </Field>
+                )}
+              />
 
-                <Button
-                  className={cn('h-[100%]!')}
-                  onClick={() => {
-                    console.log('something happend', open);
-                    toggleOpen(true);
-                    // setLoading((prev) => !prev);
-                  }}
-                >
+              <Controller
+                name="testType"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid} className="w-1/6">
+                    <Select
+                      {...field}
+                      name="testType"
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger id="testType" className="h-[100%]!">
+                        <SelectValue placeholder="Quick Test" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Test Types</SelectLabel>
+                          <SelectItem value="Performance Test">
+                            Performance Test
+                          </SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                )}
+              />
+
+              <Controller
+                name="deviceType"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid} className="w-1/6">
+                    <Select
+                      {...field}
+                      name="deviceType"
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger id="deviceType" className="h-[100%]!">
+                        <SelectValue placeholder="desktop 16'in" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>devices</SelectLabel>
+                          <SelectItem value="desktop">desktop</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                )}
+              />
+
+              <Field className="w-1/6">
+                <Button className={cn('h-[100%]! capitalize')} type="submit">
                   start test
                 </Button>
-              </div>
-            </div>
+              </Field>
+            </form>
 
             <div className={cn('relative')}>
               <div className={cn()}>
