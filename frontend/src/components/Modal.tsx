@@ -15,7 +15,7 @@ const Modal = (props: IModalProps) => {
       className="bg-black/50 inset-0 fixed backdrop-blur-xs"
       onClick={props.onClose}
     >
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="relative" onClick={(e) => e.stopPropagation()}>
         {props.children}
       </div>
     </div>,

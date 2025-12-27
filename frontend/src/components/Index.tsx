@@ -1,6 +1,8 @@
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Controller, useForm, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 
 import DashboardImage from '@/assets/dashboard.png';
 import DownloadCard from '@/assets/download-card.png';
@@ -11,7 +13,7 @@ import ShareableReports from '@/assets/share-report.png';
 import ScreenShots from '@/assets/test-completed.png';
 import DashboardScreenshot from '@/assets/dashboard-screenshot.png';
 
-import { Settings, NetworkIcon, ChartLineIcon } from 'lucide-react';
+import { Settings, NetworkIcon, ChartLineIcon, Shield } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
 import {
@@ -21,42 +23,72 @@ import {
   SelectValue,
   SelectItem,
   SelectTrigger,
+  SelectLabel,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import {
-  Field,
-  FieldContent,
-  FieldGroup,
-  FieldSet,
-} from '@/components/ui/field';
+import { Field } from '@/components/ui/field';
 
 import Homepage from '@/components/layout/Homepage.layout';
 import PlatformCard from '@/components/home/PlatformCard.home';
 import HowItWorksCard from '@/components/home/HowItWorksCard.home';
 import Modal from '@/components/Modal';
-import { SelectLabel } from '@radix-ui/react-select';
+
+import { STATUS_LABELS, type SSEEvent } from '@/utils/handleSSE.util';
 
 interface IURLTestData {
   url: string;
   testType: string;
   deviceType: string;
 }
+const REGEX_PATTERN = /([\w-]+\.)+[\w-]+(\/[\w-]*)*$/gm;
+
+const schema = z.object({
+  url: z.string().regex(REGEX_PATTERN),
+  testType: z.optional(z.string()),
+  deviceType: z.optional(z.string()),
+});
+
+type InputData = z.infer<typeof schema>;
+
+const normalizeUrl = (input: string): string => {
+  let url = input.trim();
+
+  // 1. Add protocol if missing
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname;
+
+    // 2. If hostname has no dot AND is not localhost or an IP
+    const isLocalhost = hostname === 'localhost';
+    const isIP = /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
+
+    if (!hostname.includes('.') && !isLocalhost && !isIP) {
+      parsed.hostname = `${hostname}.com`;
+    }
+
+    return parsed.toString();
+  } catch {
+    throw new Error('Invalid URL');
+  }
+};
 
 const Index = () => {
-  const [loading, setLoading] = useState(false);
-
-  const form = useForm<IURLTestData>({
+  const form = useForm<InputData>({
     defaultValues: {
       url: '',
       testType: '',
       deviceType: '',
     },
+    resolver: zodResolver(schema),
   });
 
   const [open, toggleOpen] = useState(false);
 
   // define regex pattern
-  const REGEX_PATTERN = /([\w-]+\.)+[\w-]+(\/[\w-]*)*$/gm;
 
   // TODO: - Taks left before moving to homepage
   // Get the strings from the input fields
@@ -65,23 +97,78 @@ const Index = () => {
   // 3) Make button disabled when it's page is loading
   // 4) display result in the modal
 
-  const onSubmit: SubmitHandler<IURLTestData> = (data: IURLTestData) => {
-    toggleOpen(true);
-    console.log(data, 'data...');
-    const source = new EventSource('https://www.' + data.url);
+  const [_, setTimeline] = useState<SSEEvent[]>([]);
+  const [status, setStatus] = useState();
+  const [results, setResults] = useState<any>(null);
 
-    source.onmessage = (event: MessageEvent) => {
-      console.log(event.data);
-    };
+  const handleEvent = (event: SSEEvent) => {
+    setTimeline((prev) => [...prev, event]);
 
-    source.onerror = () => source.close();
+    if (event.status === 'COMPLETE') {
+      setResults(event.data);
+    }
   };
 
+  const onSubmit: SubmitHandler<InputData> = (data: InputData) => {
+    toggleOpen((prev) => !prev);
+    const normalizedUrl = normalizeUrl(data.url);
+
+    const url = new URL('http://localhost:3000/api/v1/capture-metrics/single');
+
+    url.searchParams.set('url', normalizedUrl);
+
+    // validate that the given url has http prefix and has a tld domain attached
+    const source = new EventSource(url);
+
+    source.onmessage = (event: MessageEvent) => {
+      const parsed = JSON.parse(event.data);
+      setStatus(parsed.data.status);
+
+      const sseEvent: SSEEvent = {
+        ...parsed.data,
+        timestamp: Date.now(),
+      };
+
+      handleEvent(sseEvent);
+    };
+
+    source.onerror = (event: Event) => {
+      console.log((event as MessageEvent).data);
+      source.close();
+    };
+  };
+
+  const transformStatus = (status: string) => {
+    return status.replaceAll('_', ' ');
+  };
   return (
     <Homepage>
       <Modal isOpen={open} onClose={() => toggleOpen((prev) => !prev)}>
-        <div>
-          <p onClick={() => toggleOpen((prev) => !prev)}>this is a modal</p>
+        <div className="grid place-items-center fixed inset-0 m-auto">
+          {status !== 'COMPLETE' ? (
+            <div className="grid place-items-center text-center text-white">
+              <div className="mb-10">
+                <h2 className="text-4xl font-bold mb-5">
+                  Performing BugSpy Magic...
+                </h2>
+                <p className="mb-5">
+                  {status
+                    ? (STATUS_LABELS[status] ?? transformStatus(status))
+                    : 'Waiting to start...'}
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Shield />
+                  <p>SECURE DATA PROCESSING</p>
+                </div>
+              </div>
+              <p className="rounded-md border-white bg-blue-400/10 border p-5 text-sm">
+                Note: Do not refresh, close or click back button in this page.
+                Your result may be lost.
+              </p>
+            </div>
+          ) : (
+            <div>{status}</div>
+          )}
         </div>
       </Modal>
 
@@ -172,7 +259,9 @@ const Index = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          <SelectLabel>devices</SelectLabel>
+                          <SelectLabel className="capitalize">
+                            devices
+                          </SelectLabel>
                           <SelectItem value="desktop">desktop</SelectItem>
                         </SelectGroup>
                       </SelectContent>
