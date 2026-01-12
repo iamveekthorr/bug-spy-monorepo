@@ -1,0 +1,80 @@
+# Dependencies
+node_modules
+npm-debug.log*
+pnpm-debug.log*
+
+# Build outputs
+dist
+build
+.next
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs
+
+# Testing
+coverage
+.nyc_output
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Temporary folders
+tmp
+temp
+
+# ESLint cache
+.eslintcache
+
+# Docker files
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Screenshots and artifacts
+screenshots/
+*.jpeg
+*.jpg
+*.png
+
+# Test files
+*.spec.ts
+*.test.ts
+jest.setup.js
+
+# Config files (keep tsconfig files for build)
+jest.config.js
+.eslint*
+.prettier*
+
+# Development hooks
+.githooks/

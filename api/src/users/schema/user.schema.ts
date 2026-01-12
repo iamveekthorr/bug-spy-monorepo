@@ -23,7 +23,7 @@ export class User {
   password: string;
 
   @Prop({
-    requred: true,
+    required: true,
     type: String,
     enum: ['free', 'basic', 'premium'],
     default: 'free',
@@ -35,3 +35,8 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+// Add indexes for common query patterns
+UserSchema.index({ email: 1 }); // Already unique, but explicit index for clarity
+UserSchema.index({ subscription: 1 }); // Index for subscription queries
+UserSchema.index({ createdAt: -1 }); // Index for date-based queries

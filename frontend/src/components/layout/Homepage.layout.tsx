@@ -2,6 +2,7 @@ import type React from 'react';
 
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
+import AuthModals from '@/components/auth/AuthModals';
 
 const Homepage = ({ children }: React.PropsWithChildren) => {
   return (
@@ -9,6 +10,7 @@ const Homepage = ({ children }: React.PropsWithChildren) => {
       <Header />
       <main>{children}</main>
       <Footer />
+      <AuthModals />
     </>
   );
 };

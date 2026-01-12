@@ -27,7 +27,6 @@ import { AbortInterceptor } from './interceptors/abort.interceptor';
         const uri = config
           .get<string>('MONGO_URI')
           ?.replace('<PASSWORD>', password!);
-
         return {
           uri,
         };

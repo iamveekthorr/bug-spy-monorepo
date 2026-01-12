@@ -17,7 +17,7 @@ export interface SSEEvent {
   status: TestStatus;
   message?: string;
   progress?: number;
-  data?: any;
+  data?: unknown;
   timestamp: number;
 }
 
@@ -36,3 +36,11 @@ export const STATUS_LABELS: Record<TestStatus, string> = {
   CONSOLE_ERRORS_COMPLETE: 'Console errors analyzed',
   COMPLETE: 'Test completed',
 };
+
+export interface ResultData {
+  status: TestStatus;
+  testId: string;
+  results: Record<string, unknown>;
+  summary: Record<string, unknown>;
+  timestamp: number;
+}

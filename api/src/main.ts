@@ -3,11 +3,7 @@ import { Logger, VersioningType } from '@nestjs/common';
 
 import morgan from 'morgan';
 import compression from 'compression';
-
 import helmet from 'helmet';
-
-// import * as morgan from 'morgan';
-// import * as compression from 'compression';
 
 import { AppModule } from './app.module';
 
@@ -51,33 +47,18 @@ async function bootstrap() {
   });
 
   process.on(Signals.UNHANDLED_REJECTION, (reason: any) => {
-    console.error('Unhandled promise rejection:', reason);
-
     // Don't shut down for browser/Playwright related errors - these are expected
     // during normal browser lifecycle management
-    if (reason && reason.message) {
-      const message = (reason.message as string).toLowerCase();
-      if (
-        [
-          'browser',
-          'target closed',
-          'navigation',
-          'timeout',
-          'proctocol error',
-          'session closed',
-        ].includes(message)
-      ) {
-        console.log('Browser operation error - continuing...');
-        return;
-      }
-    }
 
     // Only shutdown for critical application errors
     console.error('Critical error detected, shutting down...');
-    app.close().catch(() => {
-      console.error('Failed to close app gracefully');
-      process.exit(1);
-    });
+    app
+      .close()
+      .then(() => console.error('Unhandled promise rejection:', reason))
+      .catch(() => {
+        console.error('Failed to close app gracefully');
+        process.exit(1);
+      });
   });
 
   process.on(Signals.SIGTERM, () => {

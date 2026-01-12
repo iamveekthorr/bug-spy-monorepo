@@ -26,78 +26,114 @@ export class AuthService {
   ) {}
 
   async login(loginDTO: Login) {
-    // Get the user details from the DB
     const { email, password } = loginDTO;
-    const doc = await this.userModel.findOne({ email }).select('+password');
+    
+    try {
+      const doc = await this.userModel.findOne({ email }).select('+password');
 
-    if (!doc) throw new AppError('No user found!', HttpStatus.NOT_FOUND);
+      if (!doc) {
+        throw new AppError('Invalid email or password', HttpStatus.UNAUTHORIZED);
+      }
 
-    // Check that the password provided matches
-    const isCorrectPassword = await bcrypt.compare(password, doc.password);
+      // Check that the password provided matches
+      const isCorrectPassword = await bcrypt.compare(password, doc.password);
 
-    if (!isCorrectPassword) {
-      throw new AppError(
-        'This user is not authenticated. Please try again',
-        HttpStatus.BAD_REQUEST,
-      );
+      if (!isCorrectPassword) {
+        throw new AppError('Invalid email or password', HttpStatus.UNAUTHORIZED);
+      }
+
+      const { password: _, ...user } = doc.toObject({
+        flattenObjectIds: true,
+        versionKey: false,
+      });
+
+      return { user };
+    } catch (error) {
+      // Re-throw AppError instances to preserve custom error handling
+      if (error instanceof AppError) {
+        throw error;
+      }
+      
+      // Handle unexpected database or bcrypt errors
+      throw new AppError('Authentication failed', HttpStatus.INTERNAL_SERVER_ERROR);
     }
-
-    const { password: _, ...user } = doc.toObject({
-      flattenObjectIds: true,
-      versionKey: false,
-    });
-
-    return { user };
   }
 
   async signup(registrationDTO: RegistrationDTO) {
-    // Get body data
-    // Check if the user exists
-    const existingUser =
-      (await this.cacheManager.get(registrationDTO.email)) ||
-      (await this.userModel.findOne({ email: registrationDTO.email }));
+    try {
+      // Check if the user exists
+      const existingUser =
+        (await this.cacheManager.get(registrationDTO.email)) ||
+        (await this.userModel.findOne({ email: registrationDTO.email }));
 
-    // works for undefined and null
-    if (existingUser != null) {
-      // User exists in cache
-      // Throw error if the user exists
-      throw new AppError(
-        'Invalid action! - User creation failed (existing user identified)',
-        HttpStatus.CONFLICT,
+      // works for undefined and null
+      if (existingUser != null) {
+        throw new AppError(
+          'User already exists',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      const SALT_ROUND = 12;
+      // Encrypt user password if it's a new user
+      const encryptedPassword = await bcrypt.hash(
+        registrationDTO.password,
+        SALT_ROUND,
       );
-    }
-    const SALT_ROUND = 12;
-    // Encrypt user password if it's a new user
-    const encryptedPassword = await bcrypt.hash(
-      registrationDTO.password,
-      SALT_ROUND,
-    );
-    // Save the data to the DB
-    const user = await this.userModel.create({
-      email: registrationDTO.email,
-      password: encryptedPassword,
-    });
-    await user.save();
-    // Write email to cache
-    await this.cacheManager.set<boolean>(user.email, true, 60 * 60 * 6 * 1000);
 
-    // Return a success string.
-    return { message: 'User created successfully' };
+      // Save the data to the DB
+      const user = await this.userModel.create({
+        email: registrationDTO.email,
+        password: encryptedPassword,
+      });
+
+      // Write email to cache to prevent duplicate registrations
+      await this.cacheManager.set<boolean>(user.email, true, 60 * 60 * 6 * 1000);
+
+      return { message: 'User created successfully' };
+    } catch (error) {
+      // Re-throw AppError instances to preserve custom error handling
+      if (error instanceof AppError) {
+        throw error;
+      }
+      
+      // Handle database validation errors
+      if (error.name === 'ValidationError' || error.code === 11000) {
+        throw new AppError('Invalid user data', HttpStatus.BAD_REQUEST);
+      }
+      
+      // Handle unexpected errors
+      throw new AppError('User registration failed', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async generateTokens(payload: JwtPayload) {
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, {
-        expiresIn: 60 * 60 * 24, // 1D
-        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-      }),
-      this.jwtService.signAsync(payload, {
-        // Access token will expire in 1week
-        expiresIn: 60 * 60 * 24 * 7,
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      }),
-    ]);
+    try {
+      const accessSecret = this.configService.get<string>('JWT_ACCESS_SECRET');
+      const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
 
-    return { accessToken, refreshToken };
+      if (!accessSecret || !refreshSecret) {
+        throw new AppError('JWT configuration error', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      const [accessToken, refreshToken] = await Promise.all([
+        this.jwtService.signAsync(payload, {
+          expiresIn: 60 * 60 * 24, // 1D
+          secret: accessSecret,
+        }),
+        this.jwtService.signAsync(payload, {
+          expiresIn: 60 * 60 * 24 * 7, // 1 week
+          secret: refreshSecret,
+        }),
+      ]);
+
+      return { accessToken, refreshToken };
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      
+      throw new AppError('Token generation failed', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }
