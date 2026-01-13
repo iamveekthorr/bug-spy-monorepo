@@ -132,8 +132,75 @@ export class AuthService {
       if (error instanceof AppError) {
         throw error;
       }
-      
+
       throw new AppError('Token generation failed', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async findOrCreateOAuthUser(data: {
+    provider: string;
+    providerId: string;
+    email: string;
+    displayName?: string;
+    avatar?: string;
+  }) {
+    try {
+      const { provider, providerId, email, displayName, avatar } = data;
+
+      // First, try to find user by provider and providerId
+      let user = await this.userModel.findOne({ provider, providerId });
+
+      if (user) {
+        // User exists with this OAuth provider
+        return user.toObject({
+          flattenObjectIds: true,
+          versionKey: false,
+        });
+      }
+
+      // Check if user exists with this email but different provider
+      const existingUserWithEmail = await this.userModel.findOne({ email });
+
+      if (existingUserWithEmail) {
+        // User exists with same email but different provider
+        // This is a security consideration - you might want to link accounts or throw an error
+        // For now, we'll throw an error to prevent account takeover
+        throw new AppError(
+          'An account with this email already exists. Please sign in with your original provider.',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      // Create new user
+      user = await this.userModel.create({
+        email,
+        provider,
+        providerId,
+        displayName,
+        avatar,
+      });
+
+      return user.toObject({
+        flattenObjectIds: true,
+        versionKey: false,
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      // Handle database errors
+      if (error.code === 11000) {
+        throw new AppError(
+          'User already exists with this provider',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      throw new AppError(
+        'OAuth authentication failed',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

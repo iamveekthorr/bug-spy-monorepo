@@ -5,6 +5,10 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -43,6 +47,8 @@
     "morgan": "^1.10.0",
     "nest-winston": "^1.10.2",
     "passport": "^0.7.0",
+    "passport-github2": "^0.1.12",
+    "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "puppeteer": "^24.16.2",
     "reflect-metadata": "^0.2.2",
@@ -63,6 +69,8 @@
     "@types/jest": "^29.5.14",
     "@types/morgan": "^1.9.10",
     "@types/node": "^22.10.7",
+    "@types/passport-github2": "^1.2.9",
+    "@types/passport-google-oauth20": "^2.0.16",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
     "eslint": "^9.18.0",
@@ -78,8 +86,7 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0",
-    "nx": "21.5.3"
+    "typescript-eslint": "^8.20.0"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -106,6 +113,5 @@
     ],
     "forceExit": true,
     "detectOpenHandles": true
-  },
-  "nx": {}
+  }
 }

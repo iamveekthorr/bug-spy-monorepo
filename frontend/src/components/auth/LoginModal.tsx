@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 import { useAuthStore } from '@/store';
+import { useLogin } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import type { LoginFormData } from '@/types';
 
@@ -27,9 +27,8 @@ interface LoginModalProps {
 
 const LoginModal = ({ isOpen, onClose, onSwitchToSignup, onSwitchToForgotPassword }: LoginModalProps) => {
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-  const { login, setError, error } = useAuthStore();
+  const { error } = useAuthStore();
+  const loginMutation = useLogin();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -41,31 +40,14 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup, onSwitchToForgotPasswor
   });
 
   const onSubmit: SubmitHandler<LoginFormData> = async (data) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Mock API call - replace with actual authentication
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Mock user data - replace with actual user data from API
-      const mockUser = {
-        id: '1',
-        email: data.email,
-        name: data.email.split('@')[0],
-        plan: 'free' as const,
-        createdAt: new Date().toISOString(),
-        emailVerified: true,
-      };
-
-      login(mockUser);
-      onClose(); // Close modal
-      navigate('/dashboard');
-    } catch (error) {
-      setError('Invalid email or password');
-    } finally {
-      setIsLoading(false);
-    }
+    loginMutation.mutate(
+      { email: data.email, password: data.password },
+      {
+        onSuccess: () => {
+          onClose();
+        },
+      }
+    );
   };
 
   if (!isOpen) return null;
@@ -169,9 +151,9 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup, onSwitchToForgotPasswor
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading}
+              disabled={loginMutation.isPending}
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {loginMutation.isPending ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
 

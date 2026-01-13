@@ -2,11 +2,12 @@
 export interface User {
   id: string;
   email: string;
-  name: string;
+  name?: string;
   avatar?: string;
-  plan: 'free' | 'pro' | 'enterprise';
+  plan?: 'free' | 'pro' | 'enterprise';
   createdAt: string;
-  emailVerified: boolean;
+  updatedAt?: string;
+  emailVerified?: boolean;
 }
 
 export interface AuthState {

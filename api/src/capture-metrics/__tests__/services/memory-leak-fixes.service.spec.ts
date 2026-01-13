@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BrowserPoolService } from '../../services/browser-pool.service';
 import { CaptureOrchestratorService } from '../../services/capture-orchestrator.service';
-import { IntelligentTimeoutService } from '../../services/intelligent-timeout.service';
+import { TimeoutService } from '../../services/timeout.service';
 
 describe('Memory Leak Fixes', () => {
   let browserPoolService: BrowserPoolService;
@@ -15,11 +15,11 @@ describe('Memory Leak Fixes', () => {
           useValue: new BrowserPoolService(5, 60000, 30000),
         },
         {
-          provide: IntelligentTimeoutService,
+          provide: TimeoutService,
           useValue: {
-            getTimeoutForOperation: jest.fn().mockReturnValue(30000),
-            recordOperationDuration: jest.fn(),
-            getRecommendedTimeout: jest.fn().mockReturnValue(30000),
+            getTimeout: jest.fn().mockReturnValue(30000),
+            executeWithTimeout: jest.fn(),
+            recordPerformance: jest.fn(),
           },
         },
       ],

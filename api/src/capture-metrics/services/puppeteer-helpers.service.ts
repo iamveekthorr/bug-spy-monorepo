@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Page, ElementHandle } from 'puppeteer';
-import { IntelligentTimeoutService } from './intelligent-timeout.service';
+import { TimeoutService } from './timeout.service';
 
 @Injectable()
 export class PuppeteerHelpersService {
   private readonly logger = new Logger(PuppeteerHelpersService.name);
 
-  constructor(private readonly intelligentTimeout: IntelligentTimeoutService) {}
+  constructor(private readonly timeoutService: TimeoutService) {}
 
   /**
    * Find elements by text content (replaces Playwright's hasText filter)
@@ -139,21 +139,21 @@ export class PuppeteerHelpersService {
 
     switch (state) {
       case 'load':
-        result = await this.intelligentTimeout.waitForLoadState(
+        result = await this.timeoutService.waitForLoadState(
           page,
           'load',
           `waitForLoadState-${state}`,
         );
         break;
       case 'domcontentloaded':
-        result = await this.intelligentTimeout.waitForLoadState(
+        result = await this.timeoutService.waitForLoadState(
           page,
           'domcontentloaded',
           `waitForLoadState-${state}`,
         );
         break;
       case 'networkidle':
-        result = await this.intelligentTimeout.waitForNetworkIdle(
+        result = await this.timeoutService.waitForNetworkIdle(
           page,
           `waitForLoadState-${state}`,
         );

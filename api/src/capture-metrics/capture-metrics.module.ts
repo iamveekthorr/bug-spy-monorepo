@@ -1,58 +1,45 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
-// Core services
-import { ScreenshotsService } from './services/screenshots.service';
-import { CookiesService } from './services/cookies.service';
-import { WebMetricsService } from './services/web-metrics.service';
-import { DeviceConfigService } from './services/device-config.service';
-import { CaptureOrchestratorService } from './services/capture-orchestrator.service';
-import { ConsoleErrorsService } from './services/console-errors.service';
+// Sub-modules
+import { BrowserManagementModule } from './modules/browser-management.module';
+import { MetricsCollectionModule } from './modules/metrics-collection.module';
+import { UtilityModule } from './modules/utility.module';
 
-// Production-ready services
-import { RateLimiterService } from './services/rate-limiter.service';
-import { ErrorHandlerService } from './services/error-handler.service';
-import { BrowserPoolService } from './services/browser-pool.service';
-import { PuppeteerHelpersService } from './services/puppeteer-helpers.service';
-import { IntelligentTimeoutService } from './services/intelligent-timeout.service';
+// Core orchestrator
+import { CaptureOrchestratorService } from './services/capture-orchestrator.service';
 import { CaptureMetricsController } from './capture-metrics.controller';
 
 // Schemas
 import { TestResult, TestResultSchema } from './schemas/test-result.schema';
 
+/**
+ * Capture Metrics Module
+ *
+ * Main module for web metrics capture functionality.
+ * Organized into sub-modules for better maintainability:
+ * - BrowserManagementModule: Browser pool and timeout management
+ * - MetricsCollectionModule: All metrics capture services
+ * - UtilityModule: Helper services and utilities
+ */
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: TestResult.name, schema: TestResultSchema },
     ]),
+    // Import organized sub-modules
+    BrowserManagementModule,
+    MetricsCollectionModule,
+    UtilityModule,
   ],
   providers: [
-    // Core services
-    ScreenshotsService,
-    CookiesService,
-    WebMetricsService,
-    DeviceConfigService,
+    // Only the orchestrator service remains here
     CaptureOrchestratorService,
-    ConsoleErrorsService,
-    // Production services
-    RateLimiterService,
-    ErrorHandlerService,
-    PuppeteerHelpersService,
-    IntelligentTimeoutService,
-    {
-      provide: BrowserPoolService,
-      useFactory: (intelligentTimeout: IntelligentTimeoutService) => {
-        return new BrowserPoolService(
-          5, // maxSize - up to 5 concurrent pages
-          0, // idleTimeoutMs - disabled for now
-          60000, // idleCheckIntervalMs
-          intelligentTimeout, // inject intelligent timeout service
-        );
-      },
-      inject: [IntelligentTimeoutService],
-    },
   ],
   controllers: [CaptureMetricsController],
-  exports: [BrowserPoolService], // Export so AppModule can inject it
+  exports: [
+    // Export browser pool for AppModule
+    BrowserManagementModule,
+  ],
 })
 export class CaptureMetricsModule {}

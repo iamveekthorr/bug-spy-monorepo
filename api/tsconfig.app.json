@@ -2,12 +2,14 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
+    "baseUrl": "./",
     "types": ["node"],
     "rootDir": "src",
     "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "target": "es2021"
+    "paths": {
+      "~/*": ["src/*"]
+    },
+    "typeRoots": ["./node_modules/@types", "./src/@types"]
   },
   "include": ["src/**/*.ts"],
   "exclude": [

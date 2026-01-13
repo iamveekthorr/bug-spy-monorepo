@@ -40,7 +40,7 @@ const Header = () => {
               <li className="hover:text-blue-600 cursor-pointer transition-colors">about</li>
             </ul>
 
-            <div className={cn('flex gap-[20px]')}>
+            <div className={cn('flex gap-[20px] items-center')}>
               {isAuthenticated ? (
                 <div className="flex items-center gap-4">
                   <Link to="/dashboard">
@@ -49,10 +49,10 @@ const Header = () => {
                     </Button>
                   </Link>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600">Hi, {user?.name?.split(' ')[0]}</span>
-                    <Button 
+                    <span className="text-sm text-gray-600">Hi, {user?.email?.split('@')[0]}</span>
+                    <Button
                       onClick={handleLogout}
-                      className={cn('capitalize text-sm')} 
+                      className={cn('capitalize text-sm')}
                       variant="ghost"
                       size="sm"
                     >
@@ -62,19 +62,18 @@ const Header = () => {
                 </div>
               ) : (
                 <>
-                  <Button 
+                  <Button
                     onClick={openSignupModal}
-                    className={cn('capitalize text-sm')} 
-                    variant="outline"
+                    className={cn('capitalize text-sm bg-blue-600 hover:bg-blue-700 text-white')}
                   >
-                    sign up
+                    Start Test
                   </Button>
-                  <Button 
+                  <button
                     onClick={openLoginModal}
-                    className={cn('capitalize text-sm')}
+                    className={cn('capitalize text-sm text-gray-700 hover:text-blue-600 transition-colors')}
                   >
                     login
-                  </Button>
+                  </button>
                 </>
               )}
             </div>

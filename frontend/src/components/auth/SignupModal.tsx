@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 import { useAuthStore } from '@/store';
+import { useSignup } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import type { SignupFormData } from '@/types';
 
 const signupSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
@@ -34,14 +33,12 @@ interface SignupModalProps {
 const SignupModal = ({ isOpen, onClose, onSwitchToLogin }: SignupModalProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-  const { login, setError, error } = useAuthStore();
+  const { error } = useAuthStore();
+  const signupMutation = useSignup();
 
-  const form = useForm<SignupFormData>({
+  const form = useForm<Omit<SignupFormData, 'name'> & { agreeToTerms: boolean }>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
-      name: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -57,32 +54,20 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }: SignupModalProps) => 
     { label: 'One number', met: /\d/.test(password) },
   ];
 
-  const onSubmit: SubmitHandler<SignupFormData> = async (data) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Mock API call - replace with actual registration
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Mock user data - replace with actual user data from API
-      const mockUser = {
-        id: '1',
+  const onSubmit: SubmitHandler<Omit<SignupFormData, 'name'> & { agreeToTerms: boolean }> = async (data) => {
+    signupMutation.mutate(
+      {
         email: data.email,
-        name: data.name,
-        plan: 'free' as const,
-        createdAt: new Date().toISOString(),
-        emailVerified: false,
-      };
-
-      login(mockUser);
-      onClose(); // Close modal
-      navigate('/dashboard');
-    } catch (error) {
-      setError('Failed to create account. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+      },
+      {
+        onSuccess: () => {
+          onClose();
+          onSwitchToLogin();
+        },
+      }
+    );
   };
 
   if (!isOpen) return null;
@@ -114,28 +99,6 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }: SignupModalProps) => 
           )}
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <Field>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Full name
-              </label>
-              <div className="relative">
-                <Input
-                  {...form.register('name')}
-                  type="text"
-                  id="name"
-                  placeholder="Enter your full name"
-                  className={cn(
-                    'pl-10',
-                    form.formState.errors.name && 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                  )}
-                />
-                <User size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              </div>
-              {form.formState.errors.name && (
-                <p className="text-red-600 text-sm mt-1">{form.formState.errors.name.message}</p>
-              )}
-            </Field>
-
             <Field>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email address
@@ -263,9 +226,9 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }: SignupModalProps) => 
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading}
+              disabled={signupMutation.isPending}
             >
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {signupMutation.isPending ? 'Creating account...' : 'Create account'}
             </Button>
           </form>
 

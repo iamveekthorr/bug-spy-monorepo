@@ -1,6 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 // Auth components
 import ProtectedRoute from './components/auth/ProtectedRoute.tsx';
@@ -18,10 +20,20 @@ import './index.css';
 
 const root = createRoot(document.getElementById('root') as HTMLElement);
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
+
 const router = createBrowserRouter([
-  { 
-    path: '/', 
-    Component: App 
+  {
+    path: '/',
+    Component: App,
   },
   {
     path: '/dashboard',
@@ -38,12 +50,15 @@ const router = createBrowserRouter([
       { path: 'scheduled', Component: ScheduledPage },
       { path: 'settings', Component: SettingsPage },
       { path: 'profile', Component: SettingsPage }, // Profile is part of settings
-    ]
-  }
+    ],
+  },
 ]);
 
 root.render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   </StrictMode>,
 );

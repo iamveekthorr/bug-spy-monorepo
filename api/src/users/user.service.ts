@@ -50,4 +50,29 @@ export class UserService {
       throw new AppError('Failed to retrieve user', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async getDashboardStats(userId: string) {
+    try {
+      // For now, return mock stats
+      // TODO: Implement real stats aggregation from saved tests
+      return {
+        totalTests: 24,
+        testsThisMonth: 12,
+        averageScore: 85,
+        criticalIssues: 3,
+      };
+    } catch (error) {
+      throw new AppError('Failed to retrieve dashboard stats', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async getUserTests(userId: string) {
+    try {
+      // For now, return empty array
+      // TODO: Implement fetching user's saved tests from database
+      return [];
+    } catch (error) {
+      throw new AppError('Failed to retrieve user tests', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

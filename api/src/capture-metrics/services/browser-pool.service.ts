@@ -8,7 +8,7 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { AppError } from '~/common/app-error.common';
-import { IntelligentTimeoutService } from './intelligent-timeout.service';
+import { TimeoutService } from './timeout.service';
 
 /**
  * A pool of browsers to manage the creation and reuse of browser pages
@@ -36,13 +36,13 @@ export class BrowserPoolService implements OnModuleDestroy {
    * @param maxSize Maximum number of pages the pool can manage.
    * @param idleTimeoutMs Time in milliseconds before an idle browser is closed.0 disables idle timeout.
    * @param idleCheckIntervalMs How often (in ms) to check for idleness.
-   * @param intelligentTimeout Intelligent timeout service for adaptive timeouts.
+   * @param timeoutService Intelligent timeout service for adaptive timeouts.
    */
   public constructor(
     maxSize: number,
     idleTimeoutMs: number = 0,
     idleCheckIntervalMs: number = 60000,
-    private readonly intelligentTimeout?: IntelligentTimeoutService,
+    private readonly timeoutService?: TimeoutService,
   ) {
     this.maxSize = maxSize;
     this.idleTimeoutMs = idleTimeoutMs;
@@ -723,9 +723,9 @@ export class BrowserPoolService implements OnModuleDestroy {
       );
 
       // Use intelligent timeout system if available, otherwise fallback to static timeout
-      if (this.intelligentTimeout) {
+      if (this.timeoutService) {
         const result =
-          await this.intelligentTimeout.closePageWithIntelligentTimeout(
+          await this.timeoutService.closePageWithTimeout(
             page,
             `${context}-close`,
           );

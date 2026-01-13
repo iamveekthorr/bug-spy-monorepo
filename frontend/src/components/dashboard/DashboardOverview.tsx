@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   TrendingUp,
@@ -13,10 +12,10 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react';
-import { useDashboardStore, useTestsStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { TestResult } from '@/types';
+import { useDashboardStats, useUserTests } from '@/hooks/useDashboard';
 
 // Mock data for recent tests
 const mockRecentTests: TestResult[] = [
@@ -153,13 +152,13 @@ const TestStatusBadge = ({ status }: { status: string }) => {
 };
 
 const DashboardOverview = () => {
-  const { stats, isLoading, refreshStats } = useDashboardStore();
-  const { setTests } = useTestsStore();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: userTests = [], isLoading: testsLoading } = useUserTests();
 
-  useEffect(() => {
-    refreshStats();
-    setTests(mockRecentTests);
-  }, [refreshStats, setTests]);
+  const isLoading = statsLoading || testsLoading;
+
+  // Use real tests from API, fallback to mock if empty
+  const recentTests = userTests.length > 0 ? userTests : mockRecentTests;
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
@@ -253,9 +252,9 @@ const DashboardOverview = () => {
               </div>
             </div>
             <div className="p-0">
-              {mockRecentTests.length > 0 ? (
+              {recentTests.length > 0 ? (
                 <div className="divide-y divide-gray-200">
-                  {mockRecentTests.map((test) => (
+                  {recentTests.map((test) => (
                     <div key={test.id} className="p-6 hover:bg-gray-50 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">

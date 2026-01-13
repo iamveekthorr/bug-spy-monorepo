@@ -196,4 +196,157 @@ describe('AuthService', () => {
       );
     });
   });
+
+  describe('findOrCreateOAuthUser', () => {
+    const oAuthData = {
+      provider: 'google',
+      providerId: 'google-123',
+      email: 'oauth@example.com',
+      displayName: 'OAuth User',
+      avatar: 'https://example.com/avatar.jpg',
+    };
+
+    it('should return existing user if found by provider and providerId', async () => {
+      const mockExistingUser = {
+        _id: 'existing-user-id',
+        email: 'oauth@example.com',
+        provider: 'google',
+        providerId: 'google-123',
+        displayName: 'OAuth User',
+        avatar: 'https://example.com/avatar.jpg',
+        toObject: jest.fn().mockReturnValue({
+          _id: 'existing-user-id',
+          email: 'oauth@example.com',
+          provider: 'google',
+          providerId: 'google-123',
+        }),
+      };
+
+      mockUserModel.findOne.mockResolvedValueOnce(mockExistingUser);
+
+      const result = await service.findOrCreateOAuthUser(oAuthData);
+
+      expect(mockUserModel.findOne).toHaveBeenCalledWith({
+        provider: 'google',
+        providerId: 'google-123',
+      });
+      expect(result).toEqual({
+        _id: 'existing-user-id',
+        email: 'oauth@example.com',
+        provider: 'google',
+        providerId: 'google-123',
+      });
+    });
+
+    it('should create new user if not found by provider and providerId', async () => {
+      const mockCreatedUser = {
+        _id: 'new-user-id',
+        email: 'oauth@example.com',
+        provider: 'google',
+        providerId: 'google-123',
+        displayName: 'OAuth User',
+        avatar: 'https://example.com/avatar.jpg',
+        toObject: jest.fn().mockReturnValue({
+          _id: 'new-user-id',
+          email: 'oauth@example.com',
+          provider: 'google',
+          providerId: 'google-123',
+          displayName: 'OAuth User',
+          avatar: 'https://example.com/avatar.jpg',
+        }),
+      };
+
+      mockUserModel.findOne.mockResolvedValueOnce(null); // No user with provider/providerId
+      mockUserModel.findOne.mockResolvedValueOnce(null); // No user with email
+      mockUserModel.create.mockResolvedValue(mockCreatedUser);
+
+      const result = await service.findOrCreateOAuthUser(oAuthData);
+
+      expect(mockUserModel.findOne).toHaveBeenCalledWith({
+        provider: 'google',
+        providerId: 'google-123',
+      });
+      expect(mockUserModel.findOne).toHaveBeenCalledWith({
+        email: 'oauth@example.com',
+      });
+      expect(mockUserModel.create).toHaveBeenCalledWith({
+        email: 'oauth@example.com',
+        provider: 'google',
+        providerId: 'google-123',
+        displayName: 'OAuth User',
+        avatar: 'https://example.com/avatar.jpg',
+      });
+      expect(result).toEqual({
+        _id: 'new-user-id',
+        email: 'oauth@example.com',
+        provider: 'google',
+        providerId: 'google-123',
+        displayName: 'OAuth User',
+        avatar: 'https://example.com/avatar.jpg',
+      });
+    });
+
+    it('should throw conflict error if user exists with same email but different provider', async () => {
+      const mockExistingUser = {
+        _id: 'existing-user-id',
+        email: 'oauth@example.com',
+        provider: 'local',
+      };
+
+      mockUserModel.findOne.mockResolvedValueOnce(null); // No user with google provider
+      mockUserModel.findOne.mockResolvedValueOnce(mockExistingUser); // User with same email exists
+
+      await expect(service.findOrCreateOAuthUser(oAuthData)).rejects.toThrow(
+        AppError,
+      );
+    });
+
+    it('should throw conflict error on duplicate key error (11000)', async () => {
+      mockUserModel.findOne.mockResolvedValueOnce(null);
+      mockUserModel.findOne.mockResolvedValueOnce(null);
+      mockUserModel.create.mockRejectedValue({ code: 11000 });
+
+      await expect(service.findOrCreateOAuthUser(oAuthData)).rejects.toThrow(
+        AppError,
+      );
+    });
+
+    it('should throw internal server error on unexpected database error', async () => {
+      mockUserModel.findOne.mockResolvedValueOnce(null);
+      mockUserModel.findOne.mockResolvedValueOnce(null);
+      mockUserModel.create.mockRejectedValue(new Error('Database connection lost'));
+
+      await expect(service.findOrCreateOAuthUser(oAuthData)).rejects.toThrow(
+        AppError,
+      );
+    });
+
+    it('should handle GitHub provider', async () => {
+      const githubData = {
+        provider: 'github',
+        providerId: 'github-456',
+        email: 'github@example.com',
+        displayName: 'GitHub User',
+      };
+
+      const mockCreatedUser = {
+        _id: 'github-user-id',
+        ...githubData,
+        toObject: jest.fn().mockReturnValue({
+          _id: 'github-user-id',
+          ...githubData,
+        }),
+      };
+
+      mockUserModel.findOne.mockResolvedValueOnce(null);
+      mockUserModel.findOne.mockResolvedValueOnce(null);
+      mockUserModel.create.mockResolvedValue(mockCreatedUser);
+
+      const result = await service.findOrCreateOAuthUser(githubData);
+
+      expect(mockUserModel.create).toHaveBeenCalledWith(githubData);
+      expect(result._id).toBe('github-user-id');
+      expect(result.provider).toBe('github');
+    });
+  });
 });

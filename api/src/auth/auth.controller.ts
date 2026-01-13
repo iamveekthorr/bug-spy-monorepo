@@ -1,13 +1,16 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
+  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Response, Request } from 'express';
+import { AuthGuard } from '@nestjs/passport';
 
 import { AuthService } from './auth.service';
 import { Login } from './dto/login.dto';
@@ -84,5 +87,69 @@ export class AuthController {
     });
 
     return { message: 'Logged out successfully' };
+  }
+
+  @Get('/google')
+  @UseGuards(AuthGuard('google'))
+  async googleAuth() {
+    // Guard redirects to Google
+  }
+
+  @Get('/google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthCallback(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user = req.user as any;
+
+    const { accessToken, refreshToken } = await this.authService.generateTokens(
+      {
+        sub: user._id.toString(),
+      },
+    );
+
+    // Save refresh token as httpOnly cookie
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/api/v1/auth/refresh',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return { user, accessToken };
+  }
+
+  @Get('/github')
+  @UseGuards(AuthGuard('github'))
+  async githubAuth() {
+    // Guard redirects to GitHub
+  }
+
+  @Get('/github/callback')
+  @UseGuards(AuthGuard('github'))
+  async githubAuthCallback(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user = req.user as any;
+
+    const { accessToken, refreshToken } = await this.authService.generateTokens(
+      {
+        sub: user._id.toString(),
+      },
+    );
+
+    // Save refresh token as httpOnly cookie
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/api/v1/auth/refresh',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return { user, accessToken };
   }
 }

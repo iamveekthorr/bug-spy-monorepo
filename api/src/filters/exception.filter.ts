@@ -29,7 +29,7 @@ export class GlobalExceptionsFilter implements ExceptionFilter {
 
     let data: { [x: string]: any } | undefined | string = undefined;
 
-    const errCode: string = err.code || false;
+    const errCode = err.code || false;
 
     // Handle AppError instances (custom application errors)
     if (err instanceof AppError) {

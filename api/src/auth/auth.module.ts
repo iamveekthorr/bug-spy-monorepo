@@ -14,6 +14,8 @@ import {
 } from './providers/jwt.provider';
 import { AccessTokenStrategy } from './strategies/access-token.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
+import { GoogleStrategy } from './strategies/google.strategy';
+import { GitHubStrategy } from './strategies/github.strategy';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     JwtRefreshSecretProvider,
     AccessTokenStrategy,
     RefreshTokenStrategy,
+    GoogleStrategy,
+    GitHubStrategy,
   ],
 })
 export class AuthModule {}

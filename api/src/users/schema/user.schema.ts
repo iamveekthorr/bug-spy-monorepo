@@ -19,8 +19,25 @@ export class User {
   email: string;
 
   @Exclude({ toPlainOnly: true })
-  @Prop({ required: true, type: String, select: false })
+  @Prop({ required: false, type: String, select: false })
   password: string;
+
+  @Prop({
+    required: true,
+    type: String,
+    enum: ['local', 'google', 'github'],
+    default: 'local',
+  })
+  provider: string = 'local';
+
+  @Prop({ required: false, type: String })
+  providerId: string;
+
+  @Prop({ required: false, type: String })
+  displayName: string;
+
+  @Prop({ required: false, type: String })
+  avatar: string;
 
   @Prop({
     required: true,
@@ -37,6 +54,7 @@ export class User {
 export const UserSchema = SchemaFactory.createForClass(User);
 
 // Add indexes for common query patterns
-UserSchema.index({ email: 1 }); // Already unique, but explicit index for clarity
+// Note: email already has a unique index from @Prop decorator
 UserSchema.index({ subscription: 1 }); // Index for subscription queries
 UserSchema.index({ createdAt: -1 }); // Index for date-based queries
+UserSchema.index({ provider: 1, providerId: 1 }, { unique: true, sparse: true }); // Unique provider+providerId combination

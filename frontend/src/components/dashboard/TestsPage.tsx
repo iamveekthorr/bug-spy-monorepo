@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { TestResult } from '@/types';
+import { useUserTests } from '@/hooks/useDashboard';
 
 // Mock test data
 const mockTests: TestResult[] = [
@@ -123,13 +124,14 @@ const TestStatusBadge = ({ status }: { status: string }) => {
 
 const TestsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { tests, setTests, filters, setFilters } = useTestsStore();
+  const { filters, setFilters } = useTestsStore();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
 
-  useEffect(() => {
-    setTests(mockTests);
-  }, [setTests]);
+  const { data: userTests = [], isLoading } = useUserTests();
+
+  // Use real tests from API, fallback to mock if empty
+  const tests = userTests.length > 0 ? userTests : mockTests;
 
   // Filter tests based on current filters and search
   const filteredTests = tests.filter((test) => {
@@ -217,6 +219,18 @@ const TestsPage = () => {
         : filteredTests.map(test => test.id)
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="mt-6 h-32 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
