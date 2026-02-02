@@ -1,16 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Page } from 'puppeteer';
-import { promises as fs } from 'fs';
-import * as path from 'path';
 import { BrowserPoolService } from './browser-pool.service';
+import { S3StorageService } from './s3-storage.service';
 
 export interface ScreenshotOptions {
   deviceType: DeviceType;
+  testId: string; // Required for S3 storage organization
   interval?: number;
   maxDuration?: number;
   maxFrames?: number;
-  outputDir?: string;
-  prefix?: string;
   format?: 'png' | 'jpeg';
   fullPage?: boolean;
   networkAware?: boolean; // Whether to adapt to network conditions
@@ -19,7 +17,10 @@ export interface ScreenshotOptions {
 export class ScreenshotsService {
   private readonly logger = new Logger(ScreenshotsService.name);
 
-  constructor(private readonly browserPool: BrowserPoolService) {}
+  constructor(
+    private readonly browserPool: BrowserPoolService,
+    private readonly s3Storage: S3StorageService,
+  ) {}
 
   async *captureScreenshots(
     page: Page,
@@ -27,23 +28,18 @@ export class ScreenshotsService {
   ): AsyncGenerator<any> {
     const {
       deviceType,
+      testId,
       interval = 500, // Faster screenshots
       maxDuration = 10000, // Shorter duration
       maxFrames = 15, // Fewer frames
-      outputDir = './screenshots',
-      prefix = `${deviceType}-frame`,
       format = 'jpeg',
     } = options;
 
-    // const config = this.deviceConfigs[deviceType];
     let frameCount = 0;
     const startTime = Date.now();
-    const screenshots: string[] = [];
+    const screenshotUrls: string[] = [];
 
     try {
-      // Create output directory
-      await fs.mkdir(outputDir, { recursive: true });
-
       yield {
         status: 'SCREENSHOT_START',
         deviceType,
@@ -55,42 +51,54 @@ export class ScreenshotsService {
 
       while (frameCount < maxFrames) {
         const elapsed = Date.now() - startTime;
-        const _currentTimestamp = Date.now();
 
         if (elapsed >= maxDuration || page.isClosed()) {
           break;
         }
 
-        // Create filename with timestamp (like WebPageTest.org)
         const secondsElapsed = Math.floor(elapsed / 1000);
-        const filename = `${prefix}-${secondsElapsed}s-${String(frameCount + 1).padStart(4, '0')}.${format}`;
-        const filepath = path.join(outputDir, filename);
 
         try {
-          // Speed-optimized screenshot settings
-          const screenshotOptions: any = {
-            path: filepath as `${string}.${string}`,
+          // Capture screenshot as buffer (in-memory, no disk I/O)
+          const screenshotBuffer = await page.screenshot({
             type: format === 'jpeg' ? 'jpeg' : 'png',
             quality: format === 'jpeg' ? 75 : undefined, // Reduced from 90 for speed
             fullPage: false, // Always capture viewport only
             omitBackground: true, // Faster processing
-          };
+            encoding: 'binary', // Return Buffer instead of base64
+          });
 
-          await page.screenshot(screenshotOptions);
+          // Verify buffer size - accept ALL screenshots including blank ones (like WebPageTest.org)
+          if (screenshotBuffer && screenshotBuffer.length > 500) {
+            // Upload to S3
+            const s3Url = await this.s3Storage.uploadScreenshot(
+              screenshotBuffer as Buffer,
+              {
+                testId,
+                deviceType,
+                frameNumber: frameCount + 1,
+                format,
+              },
+            );
 
-          // Verify file was created - accept ALL screenshots including blank ones (like WebPageTest.org)
-          const stats = await fs.stat(filepath).catch(() => null);
-          if (stats && stats.size > 500) {
-            // Lower threshold to capture blank/loading screens
-            screenshots.push(filepath);
+            screenshotUrls.push(s3Url);
             frameCount++;
 
             this.logger.log(
-              `Screenshot ${frameCount} at ${secondsElapsed}s: ${stats.size} bytes`,
+              `Screenshot ${frameCount} at ${secondsElapsed}s uploaded to S3: ${screenshotBuffer.length} bytes`,
             );
+
+            // Yield progress update with S3 URL
+            yield {
+              status: 'SCREENSHOT_CAPTURED',
+              frameNumber: frameCount,
+              url: s3Url,
+              deviceType,
+              timestamp: secondsElapsed,
+            };
           } else {
             this.logger.warn(
-              `Screenshot ${frameCount + 1} at ${secondsElapsed}s was too small (${stats?.size || 0} bytes)`,
+              `Screenshot ${frameCount + 1} at ${secondsElapsed}s was too small (${screenshotBuffer?.length || 0} bytes)`,
             );
           }
         } catch (error) {
@@ -112,10 +120,11 @@ export class ScreenshotsService {
         status: 'SCREENSHOT_COMPLETE',
         frameCount,
         deviceType,
-        message: `Screenshot capture complete - ${frameCount} screenshots taken`,
+        screenshots: screenshotUrls, // Include S3 URLs in completion event
+        message: `Screenshot capture complete - ${frameCount} screenshots uploaded to S3`,
       };
 
-      return { screenshots, frameCount, deviceType };
+      return { screenshots: screenshotUrls, frameCount, deviceType };
     } catch (error) {
       this.logger.error('Screenshot service error:', error);
       throw error;

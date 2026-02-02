@@ -1,31 +1,73 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { authAPI, LoginRequest, SignupRequest } from '@/lib/api/auth';
+import type {
+  LoginRequest,
+  SignupRequest,
+  AuthResponse,
+  SignupResponse,
+} from '@/lib/api/auth';
+import { authAPI } from '@/lib/api/auth';
 import { useAuthStore } from '@/store';
+import { useUIStore } from '@/store';
 import { useNavigate } from 'react-router-dom';
+import type { AxiosError } from 'axios';
+
+interface ErrorResponse {
+  message: string;
+}
 
 export const useLogin = () => {
-  const navigate = useNavigate();
   const { login: setAuthUser, setError, setLoading } = useAuthStore();
+  const { redirectAfterLogin, closeAuthModals } = useUIStore();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  return useMutation({
+  return useMutation<AuthResponse, AxiosError<ErrorResponse>, LoginRequest>({
     mutationFn: (credentials: LoginRequest) => authAPI.login(credentials),
     onMutate: () => {
       setLoading(true);
       setError(null);
     },
-    onSuccess: (data) => {
-      setAuthUser({
-        id: data.user._id,
+    onSuccess: (data: AuthResponse) => {
+      console.log('✅ Login successful, data:', data);
+
+      // Handle both _id and id fields
+      const userId = data.user._id || data.user.id;
+
+      if (!userId) {
+        setError('Login failed: Invalid user data');
+        setLoading(false);
+        return;
+      }
+
+      // Map backend subscription to plan field, provide defaults
+      const plan = data.user.plan || data.user.subscription || 'free';
+      const name = data.user.name || data.user.email.split('@')[0];
+
+      const user = {
+        id: userId,
         email: data.user.email,
-        createdAt: data.user.createdAt,
+        name: name,
+        plan: plan as 'free' | 'pro' | 'enterprise',
+        createdAt: data.user.createdAt || new Date().toISOString(),
         updatedAt: data.user.updatedAt,
-      });
+      };
+
+      console.log('✅ Storing user and token in auth store');
+      // Store both user and access token
+      setAuthUser(user, data.accessToken);
       setLoading(false);
       queryClient.invalidateQueries();
-      navigate('/dashboard');
+
+      // Save redirect path BEFORE closing modals (closeAuthModals clears it)
+      const destination = redirectAfterLogin || '/dashboard';
+
+      // Close auth modals if open
+      closeAuthModals();
+
+      // Navigate to dashboard or redirect path
+      navigate(destination);
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<ErrorResponse>) => {
       setLoading(false);
       const errorMessage =
         error.response?.data?.message || 'Login failed. Please try again.';
@@ -35,25 +77,61 @@ export const useLogin = () => {
 };
 
 export const useSignup = () => {
+  const { login: setAuthUser, setError, setLoading } = useAuthStore();
+  const { redirectAfterLogin, closeAuthModals } = useUIStore();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { setError, setLoading } = useAuthStore();
 
-  return useMutation({
+  return useMutation<AuthResponse, AxiosError<ErrorResponse>, SignupRequest>({
     mutationFn: (data: SignupRequest) => authAPI.signup(data),
     onMutate: () => {
       setLoading(true);
       setError(null);
     },
-    onSuccess: () => {
+    onSuccess: (data: AuthResponse) => {
+      console.log('✅ Signup successful, data:', data);
+
+      // Handle both _id and id fields
+      const userId = data.user._id || data.user.id;
+
+      if (!userId) {
+        setError('Signup failed: Invalid user data');
+        setLoading(false);
+        return;
+      }
+
+      // Map backend subscription to plan field, provide defaults
+      const plan = data.user.plan || data.user.subscription || 'free';
+      const name = data.user.name || data.user.email.split('@')[0];
+
+      const user = {
+        id: userId,
+        email: data.user.email,
+        name: name,
+        plan: plan as 'free' | 'pro' | 'enterprise',
+        createdAt: data.user.createdAt || new Date().toISOString(),
+        updatedAt: data.user.updatedAt,
+      };
+
+      console.log('✅ Storing user and token in auth store');
+      // Store both user and access token
+      setAuthUser(user, data.accessToken);
       setLoading(false);
-      // After signup, redirect to login
-      navigate('/auth/login');
+      queryClient.invalidateQueries();
+
+      // Save redirect path BEFORE closing modals
+      const destination = redirectAfterLogin || '/dashboard';
+
+      // Close auth modals if open
+      closeAuthModals();
+
+      // Navigate to dashboard or redirect path
+      navigate(destination);
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<ErrorResponse>) => {
       setLoading(false);
       const errorMessage =
-        error.response?.data?.message ||
-        'Signup failed. Please try again.';
+        error.response?.data?.message || 'Signup failed. Please try again.';
       setError(errorMessage);
     },
   });
@@ -64,14 +142,14 @@ export const useLogout = () => {
   const { logout: clearAuthUser } = useAuthStore();
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<void, AxiosError<ErrorResponse>, void>({
     mutationFn: () => authAPI.logout(),
     onSuccess: () => {
       clearAuthUser();
       queryClient.clear();
       navigate('/');
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<ErrorResponse>) => {
       // Clear auth even on error
       clearAuthUser();
       queryClient.clear();

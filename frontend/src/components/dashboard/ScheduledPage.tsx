@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import Modal from '@/components/Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { TestSchedule } from '@/types';
 
@@ -320,14 +320,18 @@ const ScheduledPage = () => {
       </div>
 
       {/* Create/Edit Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => {
-        setIsModalOpen(false);
-        setEditingSchedule(null);
+      <Dialog open={isModalOpen} onOpenChange={(open) => {
+        setIsModalOpen(open);
+        if (!open) {
+          setEditingSchedule(null);
+        }
       }}>
-        <div className="bg-white p-6 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
-            {editingSchedule ? 'Edit Schedule' : 'Create New Schedule'}
-          </h2>
+        <DialogContent className="bg-white p-6 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              {editingSchedule ? 'Edit Schedule' : 'Create New Schedule'}
+            </DialogTitle>
+          </DialogHeader>
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Field>
@@ -451,8 +455,8 @@ const ScheduledPage = () => {
               </Button>
             </div>
           </form>
-        </div>
-      </Modal>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

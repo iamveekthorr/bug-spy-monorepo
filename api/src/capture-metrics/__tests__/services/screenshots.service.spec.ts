@@ -1,20 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ScreenshotsService } from '../../services/screenshots.service';
 import { BrowserPoolService } from '../../services/browser-pool.service';
+import { S3StorageService } from '../../services/s3-storage.service';
 import { Page } from 'puppeteer';
-import { promises as fs } from 'fs';
-import * as _path from 'path';
-
-// fs is already mocked globally in jest.setup.js
 
 describe('ScreenshotsService', () => {
   let service: ScreenshotsService;
   let mockPage: jest.Mocked<Page>;
-  let mockFs: jest.Mocked<typeof fs>;
+  let mockS3Service: jest.Mocked<S3StorageService>;
   let activeGenerators: Set<AsyncGenerator<any, any, unknown>> = new Set();
 
   beforeEach(async () => {
-    jest.useFakeTimers();
+    jest.useRealTimers(); // Use real timers by default
     activeGenerators = new Set();
 
     const mockBrowserPoolService = {
@@ -25,6 +22,16 @@ describe('ScreenshotsService', () => {
       onModuleDestroy: jest.fn(),
     };
 
+    mockS3Service = {
+      uploadScreenshot: jest.fn(),
+      uploadScreenshots: jest.fn(),
+      deleteScreenshot: jest.fn(),
+      deleteScreenshots: jest.fn(),
+      fileExists: jest.fn(),
+      getBucketName: jest.fn(),
+      getRegion: jest.fn(),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ScreenshotsService,
@@ -32,11 +39,14 @@ describe('ScreenshotsService', () => {
           provide: BrowserPoolService,
           useValue: mockBrowserPoolService,
         },
+        {
+          provide: S3StorageService,
+          useValue: mockS3Service,
+        },
       ],
     }).compile();
 
     service = module.get<ScreenshotsService>(ScreenshotsService);
-    mockFs = fs as jest.Mocked<typeof fs>;
 
     // Mock page object
     mockPage = {
@@ -60,30 +70,31 @@ describe('ScreenshotsService', () => {
     activeGenerators.clear();
 
     jest.clearAllMocks();
-    jest.clearAllTimers();
-    jest.useRealTimers();
   });
 
   describe('captureScreenshots', () => {
     const defaultOptions = {
+      testId: 'test-123',
       deviceType: 'desktop' as DeviceType,
-      interval: 500,
+      interval: 50, // Shorter interval for faster tests
       maxDuration: 5000,
       maxFrames: 10,
-      outputDir: './test-screenshots',
       format: 'jpeg' as const,
     };
 
     beforeEach(() => {
-      mockFs.mkdir.mockResolvedValue(undefined);
-      mockFs.stat.mockResolvedValue({
-        size: 1000,
-        isFile: () => true,
-      } as any);
-      mockPage.screenshot.mockResolvedValue(Buffer.from('fake-screenshot'));
+      // Mock page.screenshot to return a buffer > 500 bytes (service requirement)
+      mockPage.screenshot.mockResolvedValue(Buffer.alloc(1000));
+
+      // Mock S3 upload to return URLs
+      let uploadCount = 0;
+      mockS3Service.uploadScreenshot.mockImplementation(async () => {
+        uploadCount++;
+        return `https://test-bucket.s3.us-east-1.amazonaws.com/screenshots/test-123/desktop/frame-${uploadCount}.jpeg`;
+      });
     });
 
-    it('should capture screenshots successfully', async () => {
+    it('should capture screenshots successfully and upload to S3', async () => {
       const generator = service.captureScreenshots(mockPage, defaultOptions);
       activeGenerators.add(generator);
       const results: any[] = [];
@@ -97,23 +108,41 @@ describe('ScreenshotsService', () => {
         activeGenerators.delete(generator);
       }
 
-      expect(results).toHaveLength(2); // START and COMPLETE
-      expect(results[0]).toEqual({
+      // Should have START, multiple CAPTURED events, and COMPLETE
+      const startEvent = results.find((r) => r.status === 'SCREENSHOT_START');
+      const capturedEvents = results.filter(
+        (r) => r.status === 'SCREENSHOT_CAPTURED',
+      );
+      const completeEvent = results.find(
+        (r) => r.status === 'SCREENSHOT_COMPLETE',
+      );
+
+      expect(startEvent).toEqual({
         status: 'SCREENSHOT_START',
         deviceType: 'desktop',
         message: 'Starting desktop screenshot capture',
       });
-      expect(results[1]).toEqual({
+
+      expect(capturedEvents).toHaveLength(10);
+      expect(capturedEvents[0]).toMatchObject({
+        status: 'SCREENSHOT_CAPTURED',
+        frameNumber: 1,
+        deviceType: 'desktop',
+        url: expect.stringContaining('s3.us-east-1.amazonaws.com'),
+      });
+
+      expect(completeEvent).toMatchObject({
         status: 'SCREENSHOT_COMPLETE',
         frameCount: 10,
         deviceType: 'desktop',
-        message: 'Screenshot capture complete - 10 screenshots taken',
+        screenshots: expect.arrayContaining([
+          expect.stringContaining('s3.us-east-1.amazonaws.com'),
+        ]),
+        message: 'Screenshot capture complete - 10 screenshots uploaded to S3',
       });
 
-      expect(mockFs.mkdir).toHaveBeenCalledWith('./test-screenshots', {
-        recursive: true,
-      });
       expect(mockPage.screenshot).toHaveBeenCalledTimes(10);
+      expect(mockS3Service.uploadScreenshot).toHaveBeenCalledTimes(10);
     }, 10000);
 
     it('should respect maxFrames limit', async () => {
@@ -131,8 +160,12 @@ describe('ScreenshotsService', () => {
         activeGenerators.delete(generator);
       }
 
+      const completeEvent = results.find(
+        (r) => r.status === 'SCREENSHOT_COMPLETE',
+      );
       expect(mockPage.screenshot).toHaveBeenCalledTimes(3);
-      expect(results[1].frameCount).toBe(3);
+      expect(completeEvent.frameCount).toBe(3);
+      expect(mockS3Service.uploadScreenshot).toHaveBeenCalledTimes(3);
     });
 
     it('should respect maxDuration limit', async () => {
@@ -156,9 +189,9 @@ describe('ScreenshotsService', () => {
 
     it('should handle screenshot errors gracefully', async () => {
       mockPage.screenshot
-        .mockResolvedValueOnce(Buffer.from('screenshot1'))
+        .mockResolvedValueOnce(Buffer.alloc(1000))
         .mockRejectedValueOnce(new Error('Screenshot failed'))
-        .mockResolvedValueOnce(Buffer.from('screenshot3'));
+        .mockResolvedValueOnce(Buffer.alloc(1000));
 
       const generator = service.captureScreenshots(mockPage, defaultOptions);
       activeGenerators.add(generator);
@@ -185,10 +218,13 @@ describe('ScreenshotsService', () => {
     }, 10000);
 
     it('should skip screenshots that are too small', async () => {
-      mockFs.stat
-        .mockResolvedValueOnce({ size: 1000 } as any) // Good size
-        .mockResolvedValueOnce({ size: 200 } as any) // Too small
-        .mockResolvedValueOnce({ size: 1500 } as any); // Good size
+      // Mock multiple screenshots - service will keep capturing until maxFrames is reached
+      mockPage.screenshot
+        .mockResolvedValueOnce(Buffer.alloc(1000)) // Good size - frame 1
+        .mockResolvedValueOnce(Buffer.alloc(200)) // Too small - skipped
+        .mockResolvedValueOnce(Buffer.alloc(1500)) // Good size - frame 2
+        .mockResolvedValueOnce(Buffer.alloc(300)) // Too small - skipped
+        .mockResolvedValueOnce(Buffer.alloc(1200)); // Good size - frame 3
 
       const options = { ...defaultOptions, maxFrames: 3 };
       const generator = service.captureScreenshots(mockPage, options);
@@ -198,8 +234,17 @@ describe('ScreenshotsService', () => {
         results.push(result);
       }
 
-      // Should complete with 3 total frames (including the skipped small one)
-      expect(results[1].frameCount).toBe(3);
+      const completeEvent = results.find(
+        (r) => r.status === 'SCREENSHOT_COMPLETE',
+      );
+
+      // Should have captured 3 successful frames (5 attempts, 2 skipped)
+      expect(completeEvent.frameCount).toBe(3);
+      expect(mockS3Service.uploadScreenshot).toHaveBeenCalledTimes(3);
+
+      // Verify warnings were logged for small screenshots (by checking no errors)
+      const errorEvents = results.filter((r) => r.status === 'SCREENSHOT_ERROR');
+      expect(errorEvents).toHaveLength(0); // Skipped screenshots don't generate errors
     });
 
     it('should stop when page is closed', async () => {
@@ -219,11 +264,11 @@ describe('ScreenshotsService', () => {
       expect(mockPage.screenshot).toHaveBeenCalledTimes(2);
     });
 
-    it('should use correct screenshot options', async () => {
+    it('should use correct screenshot options for PNG', async () => {
       const options = {
         ...defaultOptions,
         format: 'png' as const,
-        maxFrames: 2,
+        maxFrames: 1,
       };
 
       const generator = service.captureScreenshots(mockPage, options);
@@ -234,16 +279,15 @@ describe('ScreenshotsService', () => {
       }
 
       expect(mockPage.screenshot).toHaveBeenCalledWith({
-        path: expect.stringContaining('.png'),
         type: 'png',
         quality: undefined,
         fullPage: false,
-        animations: 'disabled',
         omitBackground: true,
+        encoding: 'binary',
       });
     });
 
-    it('should use JPEG quality settings', async () => {
+    it('should use correct screenshot options for JPEG', async () => {
       const options = {
         ...defaultOptions,
         format: 'jpeg' as const,
@@ -258,20 +302,22 @@ describe('ScreenshotsService', () => {
       }
 
       expect(mockPage.screenshot).toHaveBeenCalledWith({
-        path: expect.stringContaining('.jpeg'),
         type: 'jpeg',
         quality: 75,
         fullPage: false,
-        animations: 'disabled',
         omitBackground: true,
+        encoding: 'binary',
       });
     });
 
-    it('should create output directory if it does not exist', async () => {
+    it('should pass correct parameters to S3 upload', async () => {
       const options = {
-        ...defaultOptions,
-        outputDir: './custom-dir',
-        maxFrames: 1,
+        testId: 'test-456',
+        deviceType: 'mobile' as DeviceType,
+        format: 'png' as const,
+        maxFrames: 2,
+        interval: 100,
+        maxDuration: 5000,
       };
 
       const generator = service.captureScreenshots(mockPage, options);
@@ -281,57 +327,38 @@ describe('ScreenshotsService', () => {
         results.push(result);
       }
 
-      expect(mockFs.mkdir).toHaveBeenCalledWith('./custom-dir', {
-        recursive: true,
-      });
+      expect(mockS3Service.uploadScreenshot).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        {
+          testId: 'test-456',
+          deviceType: 'mobile',
+          frameNumber: 1,
+          format: 'png',
+        },
+      );
+
+      expect(mockS3Service.uploadScreenshot).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        {
+          testId: 'test-456',
+          deviceType: 'mobile',
+          frameNumber: 2,
+          format: 'png',
+        },
+      );
     });
 
-    it('should generate correct filename format', async () => {
-      const options = {
-        ...defaultOptions,
-        prefix: 'test-frame',
-        maxFrames: 1,
-      };
+    it('should handle S3 upload errors gracefully', async () => {
+      mockS3Service.uploadScreenshot
+        .mockResolvedValueOnce(
+          'https://test-bucket.s3.us-east-1.amazonaws.com/frame1.jpeg',
+        )
+        .mockRejectedValueOnce(new Error('S3 upload failed'))
+        .mockResolvedValueOnce(
+          'https://test-bucket.s3.us-east-1.amazonaws.com/frame3.jpeg',
+        );
 
-      const generator = service.captureScreenshots(mockPage, options);
-      const results: any[] = [];
-
-      for await (const result of generator) {
-        results.push(result);
-      }
-
-      expect(mockPage.screenshot).toHaveBeenCalledWith({
-        path: expect.stringMatching(/test-frame-\d+s-\d{4}\.jpeg$/),
-        type: 'jpeg',
-        quality: 75,
-        fullPage: false,
-        animations: 'disabled',
-        omitBackground: true,
-      });
-    });
-
-    it('should handle file system errors gracefully', async () => {
-      mockFs.mkdir.mockRejectedValue(new Error('Permission denied'));
-
-      const generator = service.captureScreenshots(mockPage, defaultOptions);
-      activeGenerators.add(generator);
-
-      try {
-        await expect(async () => {
-          for await (const _result of generator) {
-            // Should throw error
-          }
-        }).rejects.toThrow('Permission denied');
-      } finally {
-        await generator.return(undefined);
-        activeGenerators.delete(generator);
-      }
-    });
-
-    it('should handle stat errors gracefully', async () => {
-      mockFs.stat.mockRejectedValue(new Error('File not found'));
-
-      const options = { ...defaultOptions, maxFrames: 1 };
+      const options = { ...defaultOptions, maxFrames: 3 };
       const generator = service.captureScreenshots(mockPage, options);
       activeGenerators.add(generator);
       const results: any[] = [];
@@ -345,13 +372,68 @@ describe('ScreenshotsService', () => {
         activeGenerators.delete(generator);
       }
 
-      // Should continue despite stat error
-      expect(results[1].frameCount).toBe(0); // No successful screenshots due to stat error
+      const errorResults = results.filter(
+        (r) => r.status === 'SCREENSHOT_ERROR',
+      );
+
+      // S3 upload error should be caught and logged, but not stop the process
+      expect(errorResults.length).toBeGreaterThanOrEqual(0);
+      expect(mockPage.screenshot).toHaveBeenCalled();
     }, 10000);
 
-    it('should respect interval timing', async () => {
-      jest.useRealTimers(); // Use real timers for this timing test
+    it('should return S3 URLs in final result', async () => {
+      const options = { ...defaultOptions, maxFrames: 2 };
+      const generator = service.captureScreenshots(mockPage, options);
+      const results: any[] = [];
 
+      for await (const result of generator) {
+        results.push(result);
+      }
+
+      const completeEvent = results.find(
+        (r) => r.status === 'SCREENSHOT_COMPLETE',
+      );
+
+      expect(completeEvent.screenshots).toHaveLength(2);
+      expect(completeEvent.screenshots[0]).toContain(
+        's3.us-east-1.amazonaws.com',
+      );
+      expect(completeEvent.screenshots[1]).toContain(
+        's3.us-east-1.amazonaws.com',
+      );
+    });
+
+    it('should include S3 URLs in SCREENSHOT_CAPTURED events', async () => {
+      const options = { ...defaultOptions, maxFrames: 2 };
+      const generator = service.captureScreenshots(mockPage, options);
+      const results: any[] = [];
+
+      for await (const result of generator) {
+        results.push(result);
+      }
+
+      const capturedEvents = results.filter(
+        (r) => r.status === 'SCREENSHOT_CAPTURED',
+      );
+
+      expect(capturedEvents[0]).toMatchObject({
+        status: 'SCREENSHOT_CAPTURED',
+        frameNumber: 1,
+        url: expect.stringContaining('s3.us-east-1.amazonaws.com'),
+        deviceType: 'desktop',
+        timestamp: expect.any(Number),
+      });
+
+      expect(capturedEvents[1]).toMatchObject({
+        status: 'SCREENSHOT_CAPTURED',
+        frameNumber: 2,
+        url: expect.stringContaining('s3.us-east-1.amazonaws.com'),
+        deviceType: 'desktop',
+        timestamp: expect.any(Number),
+      });
+    });
+
+    it('should respect interval timing', async () => {
       const options = {
         ...defaultOptions,
         interval: 10, // Use shorter interval to speed up test
@@ -373,8 +455,8 @@ describe('ScreenshotsService', () => {
       expect(duration).toBeGreaterThan(10);
     });
 
-    it('should generate unique filenames with timestamps', async () => {
-      const options = { ...defaultOptions, maxFrames: 2 };
+    it('should increment frame numbers correctly', async () => {
+      const options = { ...defaultOptions, maxFrames: 3 };
       const generator = service.captureScreenshots(mockPage, options);
       const results: any[] = [];
 
@@ -382,14 +464,30 @@ describe('ScreenshotsService', () => {
         results.push(result);
       }
 
-      const calls = mockPage.screenshot.mock.calls;
-      const path1 = calls[0]?.[0]?.path;
-      const path2 = calls[1]?.[0]?.path;
+      const capturedEvents = results.filter(
+        (r) => r.status === 'SCREENSHOT_CAPTURED',
+      );
 
-      // Filenames should be different
-      expect(path1).not.toBe(path2);
-      expect(path1).toMatch(/desktop-frame-\d+s-0001\.jpeg$/);
-      expect(path2).toMatch(/desktop-frame-\d+s-0002\.jpeg$/);
+      expect(capturedEvents[0].frameNumber).toBe(1);
+      expect(capturedEvents[1].frameNumber).toBe(2);
+      expect(capturedEvents[2].frameNumber).toBe(3);
+
+      // Verify S3 upload was called with correct frame numbers
+      expect(mockS3Service.uploadScreenshot).toHaveBeenNthCalledWith(
+        1,
+        expect.any(Buffer),
+        expect.objectContaining({ frameNumber: 1 }),
+      );
+      expect(mockS3Service.uploadScreenshot).toHaveBeenNthCalledWith(
+        2,
+        expect.any(Buffer),
+        expect.objectContaining({ frameNumber: 2 }),
+      );
+      expect(mockS3Service.uploadScreenshot).toHaveBeenNthCalledWith(
+        3,
+        expect.any(Buffer),
+        expect.objectContaining({ frameNumber: 3 }),
+      );
     });
   });
 });

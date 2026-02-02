@@ -18,6 +18,10 @@ import {
   Network,
   Terminal,
   UserCheck,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  ZoomIn,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -235,6 +239,202 @@ const ErrorItem = ({ error }: { error: ErrorReport }) => {
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+interface Screenshot {
+  id: string;
+  url: string;
+  type: string;
+  timestamp: number;
+  deviceType: string;
+}
+
+const ScreenshotFilmstrip = ({ screenshots }: { screenshots: Screenshot[] }) => {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  const handlePrevious = () => {
+    setSelectedIndex((prev) => (prev > 0 ? prev - 1 : screenshots.length - 1));
+  };
+
+  const handleNext = () => {
+    setSelectedIndex((prev) => (prev < screenshots.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleThumbnailClick = (index: number) => {
+    setSelectedIndex(index);
+  };
+
+  const openLightbox = () => {
+    setIsLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setIsLightboxOpen(false);
+  };
+
+  if (screenshots.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Eye size={48} className="mx-auto text-gray-400 mb-4" />
+        <p className="text-gray-500">No screenshots available</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Main Image Display */}
+      <div className="relative bg-gray-900 rounded-lg overflow-hidden">
+        <div className="aspect-video flex items-center justify-center p-4">
+          <div className="relative max-h-[500px] w-full flex items-center justify-center">
+            {/* Placeholder - replace with actual image when available */}
+            <div className="bg-gray-800 rounded-lg w-full h-96 flex flex-col items-center justify-center">
+              <Eye size={64} className="text-gray-600 mb-4" />
+              <p className="text-gray-400 text-sm capitalize">
+                {screenshots[selectedIndex].type.replace('-', ' ')}
+              </p>
+              <p className="text-gray-500 text-xs mt-2">
+                {screenshots[selectedIndex].deviceType}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Arrows */}
+        {screenshots.length > 1 && (
+          <>
+            <button
+              onClick={handlePrevious}
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
+              aria-label="Previous screenshot"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <button
+              onClick={handleNext}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
+              aria-label="Next screenshot"
+            >
+              <ChevronRight size={24} />
+            </button>
+          </>
+        )}
+
+        {/* Zoom Button */}
+        <button
+          onClick={openLightbox}
+          className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg transition-colors"
+          aria-label="View full size"
+        >
+          <ZoomIn size={20} />
+        </button>
+
+        {/* Counter */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+          {selectedIndex + 1} / {screenshots.length}
+        </div>
+      </div>
+
+      {/* Filmstrip Thumbnails */}
+      <div className="relative">
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200">
+          <div className="flex gap-3 pb-2">
+            {screenshots.map((screenshot, index) => (
+              <button
+                key={screenshot.id}
+                onClick={() => handleThumbnailClick(index)}
+                className={cn(
+                  'flex-shrink-0 w-32 h-20 rounded-lg border-2 transition-all overflow-hidden',
+                  selectedIndex === index
+                    ? 'border-blue-500 ring-2 ring-blue-200'
+                    : 'border-gray-300 hover:border-gray-400'
+                )}
+              >
+                {/* Placeholder thumbnail - replace with actual image when available */}
+                <div className="w-full h-full bg-gray-200 flex flex-col items-center justify-center">
+                  <Eye size={20} className="text-gray-500" />
+                  <p className="text-xs text-gray-600 mt-1 capitalize">
+                    {screenshot.type.split('-')[0]}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Screenshot Info */}
+      <div className="bg-gray-50 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-medium text-gray-900 capitalize">
+              {screenshots[selectedIndex].type.replace('-', ' ')}
+            </h4>
+            <p className="text-sm text-gray-600 mt-1">
+              Device: {screenshots[selectedIndex].deviceType} •
+              Captured at {new Date(screenshots[selectedIndex].timestamp).toLocaleTimeString()}
+            </p>
+          </div>
+          <Button variant="outline" size="sm">
+            <Download size={16} className="mr-2" />
+            Download
+          </Button>
+        </div>
+      </div>
+
+      {/* Lightbox Modal */}
+      {isLightboxOpen && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
+          <button
+            onClick={closeLightbox}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            aria-label="Close lightbox"
+          >
+            <X size={32} />
+          </button>
+
+          {/* Navigation in Lightbox */}
+          {screenshots.length > 1 && (
+            <>
+              <button
+                onClick={handlePrevious}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white p-4 rounded-full transition-colors"
+                aria-label="Previous screenshot"
+              >
+                <ChevronLeft size={32} />
+              </button>
+              <button
+                onClick={handleNext}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white p-4 rounded-full transition-colors"
+                aria-label="Next screenshot"
+              >
+                <ChevronRight size={32} />
+              </button>
+            </>
+          )}
+
+          {/* Full Size Image */}
+          <div className="max-w-7xl max-h-[90vh] w-full px-4">
+            <div className="bg-gray-800 rounded-lg w-full h-[80vh] flex flex-col items-center justify-center">
+              <Eye size={96} className="text-gray-600 mb-6" />
+              <p className="text-gray-400 text-lg capitalize">
+                {screenshots[selectedIndex].type.replace('-', ' ')}
+              </p>
+              <p className="text-gray-500 text-sm mt-2">
+                {screenshots[selectedIndex].deviceType}
+              </p>
+            </div>
+          </div>
+
+          {/* Counter */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/10 text-white px-4 py-2 rounded-full">
+            {selectedIndex + 1} / {screenshots.length}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -575,32 +775,7 @@ const TestResultPage = () => {
           {activeTab === 'screenshots' && (
             <div>
               <h3 className="text-lg font-semibold mb-4">Screenshots</h3>
-              {test.results?.screenshots && test.results.screenshots.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {test.results.screenshots.map((screenshot) => (
-                    <div key={screenshot.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="bg-gray-50 px-4 py-2 border-b">
-                        <h4 className="font-medium text-gray-900 capitalize">
-                          {screenshot.type.replace('-', ' ')}
-                        </h4>
-                      </div>
-                      <div className="p-4">
-                        <div className="bg-gray-100 aspect-video rounded-lg flex items-center justify-center">
-                          <Eye size={48} className="text-gray-400" />
-                        </div>
-                        <Button variant="outline" className="w-full mt-4">
-                          View Full Size
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Eye size={48} className="mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500">No screenshots available</p>
-                </div>
-              )}
+              <ScreenshotFilmstrip screenshots={test.results?.screenshots || []} />
             </div>
           )}
 

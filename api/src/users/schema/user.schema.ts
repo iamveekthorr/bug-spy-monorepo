@@ -47,6 +47,23 @@ export class User {
   })
   subscription: string = 'free';
 
+  // Password reset fields
+  @Exclude({ toPlainOnly: true })
+  @Prop({ required: false, type: String, select: false })
+  resetPasswordToken: string; // Hashed token
+
+  @Exclude({ toPlainOnly: true })
+  @Prop({ required: false, type: Date, select: false })
+  resetPasswordExpires: Date;
+
+  @Exclude({ toPlainOnly: true })
+  @Prop({ required: false, type: Number, default: 0, select: false })
+  resetPasswordAttempts: number; // Rate limiting
+
+  @Exclude({ toPlainOnly: true })
+  @Prop({ required: false, type: Date, select: false })
+  lastResetPasswordRequest: Date;
+
   createdAt: Date;
   updatedAt: Date;
 }

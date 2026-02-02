@@ -5,7 +5,7 @@ import { DeviceConfigService } from '../services/device-config.service';
 import { RateLimiterService } from '../services/rate-limiter.service';
 import { ErrorHandlerService } from '../services/error-handler.service';
 import { PersistenceService } from '../services/persistence.service';
-import { BrowserManagementModule } from './browser-management.module';
+import { S3StorageService } from '../services/s3-storage.service';
 import { TestResult, TestResultSchema } from '../schemas/test-result.schema';
 
 /**
@@ -17,10 +17,11 @@ import { TestResult, TestResultSchema } from '../schemas/test-result.schema';
  * - Rate limiting for API protection
  * - Error handling and formatting
  * - Data persistence (database and cache)
+ *
+ * NOTE: TimeoutService is available globally via BrowserManagementModule
  */
 @Module({
   imports: [
-    BrowserManagementModule, // PuppeteerHelpers needs TimeoutService
     MongooseModule.forFeature([
       { name: TestResult.name, schema: TestResultSchema },
     ]),
@@ -31,6 +32,7 @@ import { TestResult, TestResultSchema } from '../schemas/test-result.schema';
     RateLimiterService,
     ErrorHandlerService,
     PersistenceService,
+    S3StorageService,
   ],
   exports: [
     PuppeteerHelpersService,
@@ -38,6 +40,7 @@ import { TestResult, TestResultSchema } from '../schemas/test-result.schema';
     RateLimiterService,
     ErrorHandlerService,
     PersistenceService,
+    S3StorageService,
   ],
 })
 export class UtilityModule {}

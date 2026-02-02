@@ -1,14 +1,18 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { BrowserPoolService } from '../services/browser-pool.service';
 import { TimeoutService } from '../services/timeout.service';
 
 /**
- * Browser Management Module
+ * Browser Management Module (Global)
  *
  * Handles browser lifecycle and timeout management:
  * - Browser pool for resource management
  * - Intelligent timeout strategies
+ *
+ * NOTE: This module is global to ensure a single instance of BrowserPoolService
+ * is shared across all modules, preventing duplicate cleanup on shutdown.
  */
+@Global()
 @Module({
   providers: [
     TimeoutService,

@@ -1,4 +1,4 @@
-import { api, apiClient } from '../api-client';
+import { api } from '../api-client';
 
 export interface LoginRequest {
   email: string;
@@ -15,8 +15,13 @@ export interface AuthResponse {
   user: {
     _id: string;
     email: string;
-    createdAt: string;
-    updatedAt: string;
+    name?: string; // Optional from backend
+    provider?: string;
+    subscription?: string;
+    plan?: string; // Optional from backend
+    id?: string;
+    createdAt?: string;
+    updatedAt?: string;
   };
   accessToken: string;
 }
@@ -31,34 +36,49 @@ export interface SignupResponse {
 
 export const authAPI = {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/login', credentials);
+    // Backend wraps response in: { status: 'success', data: { user, accessToken } }
+    const response = await api.post<{ status: string; data: AuthResponse }>('/auth/login', credentials);
 
-    // Store access token in API client
-    apiClient.setAccessToken(response.data.accessToken);
+    console.log('🔍 Login response:', response.data);
+    console.log('🔍 Access token from response:', response.data?.data?.accessToken);
 
-    return response.data;
+    // Validate response structure
+    if (!response.data?.data?.user || !response.data?.data?.accessToken) {
+      console.error('❌ Invalid response structure:', response.data);
+      throw new Error('Invalid response from server');
+    }
+
+    // Token will be stored in auth store by the useLogin hook
+    return response.data.data;
   },
 
-  async signup(data: SignupRequest): Promise<SignupResponse> {
-    const response = await api.post<SignupResponse>('/auth/signup', data);
-    return response.data;
+  async signup(data: SignupRequest): Promise<AuthResponse> {
+    // Backend wraps response and now returns { user, accessToken } like login
+    const response = await api.post<{ status: string; data: AuthResponse }>('/auth/signup', data);
+
+    console.log('🔍 Signup response:', response.data);
+    console.log('🔍 Access token from response:', response.data?.data?.accessToken);
+
+    // Validate response structure
+    if (!response.data?.data?.user || !response.data?.data?.accessToken) {
+      console.error('❌ Invalid signup response structure:', response.data);
+      throw new Error('Invalid response from server');
+    }
+
+    // Token will be stored in auth store by the useSignup hook
+    return response.data.data;
   },
 
   async logout(): Promise<void> {
-    try {
-      await api.post('/auth/logout');
-    } finally {
-      // Clear token even if request fails
-      apiClient.clearAccessToken();
-    }
+    // Logout endpoint will clear the refresh token cookie
+    // The useLogout hook will clear the auth store (including access token)
+    await api.post('/auth/logout');
   },
 
   async refreshToken(): Promise<{ accessToken: string }> {
     const response = await api.post<{ accessToken: string }>('/auth/refresh');
 
-    // Update access token in API client
-    apiClient.setAccessToken(response.data.accessToken);
-
+    // Token will be stored in auth store by the refresh interceptor
     return response.data;
   },
 };

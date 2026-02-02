@@ -27,6 +27,20 @@ export interface SaveTestResponse {
   savedTestId: string;
 }
 
+export interface SyncTestRequest {
+  url: string;
+  testType?: string;
+  deviceType?: string;
+  results: Record<string, unknown>;
+  timestamp: number;
+}
+
+export interface SyncTestsResponse {
+  message: string;
+  syncedCount: number;
+  failedCount: number;
+}
+
 export interface TestStreamEvent {
   type: 'progress' | 'complete' | 'error';
   data: any;
@@ -79,6 +93,15 @@ export const testsAPI = {
   async saveTest(data: SaveTestRequest): Promise<SaveTestResponse> {
     const response = await api.post<SaveTestResponse>('/capture-metrics/save', data);
     return response.data;
+  },
+
+  /**
+   * Sync local test results to server (requires authentication)
+   */
+  async syncTestResults(tests: SyncTestRequest[]): Promise<SyncTestsResponse> {
+    // Backend wraps response in: { status: 'success', data: {...} }
+    const response = await api.post<{ status: string; data: SyncTestsResponse }>('/user/tests/sync', { tests });
+    return response.data.data;
   },
 
   /**

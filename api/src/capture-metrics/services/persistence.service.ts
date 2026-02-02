@@ -70,7 +70,7 @@ export class PersistenceService {
           networkType: tempData.captureData.networkType,
           testId: testId,
         },
-        status: 'completed',
+        status: tempData.results.status || 'completed',
       });
 
       const savedResult = await testResult.save();

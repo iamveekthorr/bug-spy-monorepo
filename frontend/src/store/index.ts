@@ -4,9 +4,11 @@ import type { AuthState, User, TestResult, DashboardStats } from '@/types';
 
 // Auth Store
 interface AuthStore extends AuthState {
-  login: (user: User) => void;
+  accessToken: string | null;
+  login: (user: User, accessToken: string) => void;
   logout: () => void;
   setUser: (user: User) => void;
+  setAccessToken: (token: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 }
@@ -19,27 +21,31 @@ export const useAuthStore = create<AuthStore>()(
         isAuthenticated: false,
         isLoading: false,
         error: null,
-        
-        login: (user: User) =>
+        accessToken: null,
+
+        login: (user: User, accessToken: string) =>
           set(
-            { user, isAuthenticated: true, isLoading: false, error: null },
+            { user, accessToken, isAuthenticated: true, isLoading: false, error: null },
             false,
             'auth/login'
           ),
-        
+
         logout: () =>
           set(
-            { user: null, isAuthenticated: false, isLoading: false, error: null },
+            { user: null, accessToken: null, isAuthenticated: false, isLoading: false, error: null },
             false,
             'auth/logout'
           ),
-        
+
         setUser: (user: User) =>
           set({ user }, false, 'auth/setUser'),
-        
+
+        setAccessToken: (accessToken: string | null) =>
+          set({ accessToken }, false, 'auth/setAccessToken'),
+
         setLoading: (isLoading: boolean) =>
           set({ isLoading }, false, 'auth/setLoading'),
-        
+
         setError: (error: string | null) =>
           set({ error }, false, 'auth/setError'),
       }),
@@ -48,6 +54,7 @@ export const useAuthStore = create<AuthStore>()(
         partialize: (state) => ({
           user: state.user,
           isAuthenticated: state.isAuthenticated,
+          accessToken: state.accessToken,
         }),
       }
     ),
@@ -175,28 +182,9 @@ export const useDashboardStore = create<DashboardStore>()(
       
       refreshStats: async () => {
         set({ isLoading: true, error: null }, false, 'dashboard/refreshStats');
-        try {
-          // API call would go here
-          // const stats = await dashboardAPI.getStats();
-          // set({ stats, isLoading: false });
-          
-          // Mock data for now
-          const mockStats: DashboardStats = {
-            totalTests: 156,
-            testsThisMonth: 42,
-            averageScore: 85,
-            criticalIssues: 3,
-            recentTests: [],
-          };
-          
-          set({ stats: mockStats, isLoading: false }, false, 'dashboard/refreshStats/success');
-        } catch (error) {
-          set(
-            { error: error instanceof Error ? error.message : 'Failed to fetch stats', isLoading: false },
-            false,
-            'dashboard/refreshStats/error'
-          );
-        }
+        // This method is deprecated - use the useDashboardStats hook instead
+        // which fetches real data from the API
+        set({ isLoading: false }, false, 'dashboard/refreshStats/deprecated');
       },
     }),
     {
@@ -209,23 +197,27 @@ export const useDashboardStore = create<DashboardStore>()(
 interface UIStore {
   sidebarOpen: boolean;
   currentPage: string;
-  
+
   // Auth modal state
   authModals: {
     loginOpen: boolean;
     signupOpen: boolean;
     forgotPasswordOpen: boolean;
   };
-  
+
+  // Redirect path after login
+  redirectAfterLogin: string | null;
+
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setCurrentPage: (page: string) => void;
-  
+
   // Auth modal actions
-  openLoginModal: () => void;
+  openLoginModal: (redirectPath?: string) => void;
   openSignupModal: () => void;
   openForgotPasswordModal: () => void;
   closeAuthModals: () => void;
+  setRedirectAfterLogin: (path: string | null) => void;
 }
 
 export const useUIStore = create<UIStore>()(
@@ -238,26 +230,28 @@ export const useUIStore = create<UIStore>()(
         signupOpen: false,
         forgotPasswordOpen: false,
       },
-      
+      redirectAfterLogin: null,
+
       toggleSidebar: () =>
         set((state) => ({ sidebarOpen: !state.sidebarOpen }), false, 'ui/toggleSidebar'),
-      
+
       setSidebarOpen: (sidebarOpen: boolean) =>
         set({ sidebarOpen }, false, 'ui/setSidebarOpen'),
-      
+
       setCurrentPage: (currentPage: string) =>
         set({ currentPage }, false, 'ui/setCurrentPage'),
-      
-      openLoginModal: () =>
+
+      openLoginModal: (redirectPath?: string) =>
         set(
-          { 
-            authModals: { 
-              loginOpen: true, 
-              signupOpen: false, 
-              forgotPasswordOpen: false 
-            } 
-          }, 
-          false, 
+          {
+            authModals: {
+              loginOpen: true,
+              signupOpen: false,
+              forgotPasswordOpen: false
+            },
+            redirectAfterLogin: redirectPath || null,
+          },
+          false,
           'ui/openLoginModal'
         ),
       
@@ -289,16 +283,20 @@ export const useUIStore = create<UIStore>()(
       
       closeAuthModals: () =>
         set(
-          { 
-            authModals: { 
-              loginOpen: false, 
-              signupOpen: false, 
-              forgotPasswordOpen: false 
-            } 
-          }, 
-          false, 
+          {
+            authModals: {
+              loginOpen: false,
+              signupOpen: false,
+              forgotPasswordOpen: false
+            },
+            redirectAfterLogin: null,
+          },
+          false,
           'ui/closeAuthModals'
         ),
+
+      setRedirectAfterLogin: (path: string | null) =>
+        set({ redirectAfterLogin: path }, false, 'ui/setRedirectAfterLogin'),
     }),
     {
       name: 'ui-store',

@@ -2,9 +2,9 @@
 export interface User {
   id: string;
   email: string;
-  name?: string;
+  name: string; // Required field - used in DashboardLayout
   avatar?: string;
-  plan?: 'free' | 'pro' | 'enterprise';
+  plan: 'free' | 'pro' | 'enterprise'; // Required field - used in DashboardLayout
   createdAt: string;
   updatedAt?: string;
   emailVerified?: boolean;
@@ -111,7 +111,21 @@ export interface DashboardStats {
   testsThisMonth: number;
   averageScore: number;
   criticalIssues: number;
-  recentTests: TestResult[];
+  performanceTrend: {
+    thisWeek: number;
+    thisMonth: number;
+    lastThreeMonths: number;
+  };
+  testsByStatus: {
+    completed: number;
+    failed: number;
+    running: number;
+  };
+  testsByType: {
+    performance: number;
+    screenshot: number;
+    cookie: number;
+  };
 }
 
 export interface TestSchedule {

@@ -6,8 +6,10 @@ import { BrowserManagementModule } from './modules/browser-management.module';
 import { MetricsCollectionModule } from './modules/metrics-collection.module';
 import { UtilityModule } from './modules/utility.module';
 
-// Core orchestrator
+// Core orchestrator and specialized services
 import { CaptureOrchestratorService } from './services/capture-orchestrator.service';
+import { SingleCaptureService } from './services/single-capture.service';
+import { BatchCaptureService } from './services/batch-capture.service';
 import { CaptureMetricsController } from './capture-metrics.controller';
 
 // Schemas
@@ -33,13 +35,12 @@ import { TestResult, TestResultSchema } from './schemas/test-result.schema';
     UtilityModule,
   ],
   providers: [
-    // Only the orchestrator service remains here
+    // Orchestrator facade and specialized services
     CaptureOrchestratorService,
+    SingleCaptureService,
+    BatchCaptureService,
   ],
   controllers: [CaptureMetricsController],
-  exports: [
-    // Export browser pool for AppModule
-    BrowserManagementModule,
-  ],
+  // No exports needed - BrowserManagementModule is @Global()
 })
 export class CaptureMetricsModule {}

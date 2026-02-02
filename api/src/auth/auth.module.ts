@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { MongooseModule } from '@nestjs/mongoose';
 
 import { UsersModule } from '~/users/users.module';
 import { User, UserSchema } from '~/users/schema/user.schema';
+import { EmailModule } from '~/common/email/email.module';
 
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -22,7 +23,8 @@ import { GitHubStrategy } from './strategies/github.strategy';
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({}),
-    UsersModule,
+    forwardRef(() => UsersModule),
+    EmailModule,
   ],
   controllers: [AuthController],
   providers: [
@@ -33,6 +35,13 @@ import { GitHubStrategy } from './strategies/github.strategy';
     RefreshTokenStrategy,
     GoogleStrategy,
     GitHubStrategy,
+  ],
+  exports: [
+    AuthService,
+    AccessTokenStrategy,
+    RefreshTokenStrategy,
+    JwtAccessSecretProvider,
+    JwtRefreshSecretProvider,
   ],
 })
 export class AuthModule {}

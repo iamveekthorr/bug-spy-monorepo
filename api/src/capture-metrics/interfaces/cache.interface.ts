@@ -13,6 +13,7 @@ export interface TestResults {
   testType: string;
   testId?: string;
   timestamp: number;
+  status: 'completed' | 'failed' | 'running';
   cookieHandling: CookieHandlingResult | null;
   webMetrics: WebMetricsResult | null;
   screenshots: ScreenshotResult | null;
@@ -54,6 +55,7 @@ export interface VitalsMetrics {
 export interface ScreenshotResult {
   frameCount: number;
   deviceType: string;
+  screenshots: string[]; // Array of S3 URLs
   message: string;
 }
 

@@ -1,8 +1,9 @@
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Controller, useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { indexedDBService } from '@/lib/indexedDB';
 
 import DashboardImage from '@/assets/dashboard.png';
 import DownloadCard from '@/assets/download-card.png';
@@ -18,8 +19,8 @@ import {
   NetworkIcon,
   ChartLineIcon,
   Shield,
-  Download,
   XIcon,
+  XCircle,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -30,32 +31,23 @@ import {
   SelectValue,
   SelectItem,
   SelectTrigger,
-  SelectLabel,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 
 import Homepage from '@/components/layout/Homepage.layout';
 import PlatformCard from '@/components/home/PlatformCard.home';
 import HowItWorksCard from '@/components/home/HowItWorksCard.home';
-import Modal from '@/components/Modal';
 
 import {
   STATUS_LABELS,
   type ResultData,
   type SSEEvent,
 } from '@/utils/handleSSE.util';
-import SvgIcon from './svg-icon-component/svg-icon.component';
 import { Link } from 'react-router-dom';
 import { useUIStore } from '@/store';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from './ui/table';
 
 const REGEX_PATTERN = /([\w-]+\.)+[\w-]+(\/[\w-]*)*$/gm;
 
@@ -106,6 +98,13 @@ const Index = () => {
 
   const [open, toggleOpen] = useState(false);
 
+  // Initialize IndexedDB on component mount
+  useEffect(() => {
+    indexedDBService.init().catch((error) => {
+      console.error('Failed to initialize IndexedDB:', error);
+    });
+  }, []);
+
   // define regex pattern
 
   // TODO: - Taks left before moving to homepage
@@ -118,153 +117,648 @@ const Index = () => {
   const [, setTimeline] = useState<SSEEvent[]>([]);
   const [status, setStatus] = useState();
   const [results, setResults] = useState<Record<string, unknown> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleEvent = (event: ResultData) => {
+  const handleEvent = async (event: ResultData) => {
     setTimeline((prev) => [...prev, event]);
 
     if (event.status === 'COMPLETE') {
       setResults(event.results);
+      setIsLoading(false);
 
-      console.log(event);
+      // Save test result to IndexedDB
+      try {
+        const formValues = form.getValues();
+        await indexedDBService.saveTestResult({
+          url: formValues.url,
+          testType: formValues.testType,
+          deviceType: formValues.deviceType,
+          results: event.results || {},
+          timestamp: Date.now(),
+          syncedToServer: false,
+        });
+      } catch (error) {
+        console.error('Failed to save test result to IndexedDB:', error);
+      }
+    }
+  };
+
+  const resetTestState = () => {
+    setStatus(undefined);
+    setResults(null);
+    setError(null);
+    setIsLoading(false);
+  };
+
+  const startTest = (data: InputData) => {
+    try {
+      // Reset previous state
+      resetTestState();
+      setIsLoading(true);
+      setError(null);
+
+      const normalizedUrl = normalizeUrl(data.url);
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
+      const url = new URL(`${apiBaseUrl}/capture-metrics/single`);
+      url.searchParams.set('url', normalizedUrl);
+
+      // validate that the given url has http prefix and has a tld domain attached
+      const source = new EventSource(url);
+      let timeoutId: ReturnType<typeof setTimeout>;
+
+      // Set timeout for 60 seconds
+      timeoutId = setTimeout(() => {
+        source.close();
+        setError(
+          'Test timed out. The website may be taking too long to respond.',
+        );
+        setIsLoading(false);
+      }, 60000);
+
+      source.onmessage = (event: MessageEvent) => {
+        try {
+          const parsed = JSON.parse(event.data);
+
+          // Check if server sent an error status
+          if (parsed.error || parsed.status === 'error') {
+            setError(
+              parsed.message || 'An error occurred while testing the website.',
+            );
+            setIsLoading(false);
+            source.close();
+            clearTimeout(timeoutId);
+            return;
+          }
+
+          setStatus(parsed.data.status);
+
+          const sseEvent: ResultData = {
+            ...parsed.data,
+            timestamp: Date.now(),
+          };
+
+          handleEvent(sseEvent);
+
+          if (parsed.data.status === 'COMPLETE') {
+            clearTimeout(timeoutId);
+          }
+        } catch (parseError) {
+          console.error('Failed to parse SSE data:', parseError);
+          setError('Failed to process test results. Please try again.');
+          setIsLoading(false);
+          source.close();
+          clearTimeout(timeoutId);
+        }
+      };
+
+      source.onerror = (event: Event) => {
+        console.error('EventSource error:', event);
+        clearTimeout(timeoutId);
+        source.close();
+        setIsLoading(false);
+
+        // Provide user-friendly error message
+        setError(
+          'Unable to connect to the testing service. Please check your connection and try again.',
+        );
+      };
+    } catch (urlError) {
+      console.error('URL validation error:', urlError);
+      setError('Invalid URL format. Please enter a valid website URL.');
+      setIsLoading(false);
     }
   };
 
   const onSubmit: SubmitHandler<InputData> = (data: InputData) => {
-    toggleOpen((prev) => !prev);
-    const normalizedUrl = normalizeUrl(data.url);
-
-    const url = new URL('http://localhost:3000/api/v1/capture-metrics/single');
-
-    url.searchParams.set('url', normalizedUrl);
-
-    // validate that the given url has http prefix and has a tld domain attached
-    const source = new EventSource(url);
-
-    source.onmessage = (event: MessageEvent) => {
-      const parsed = JSON.parse(event.data);
-      setStatus(parsed.data.status);
-      console.log(parsed.data);
-
-      const sseEvent: ResultData = {
-        ...parsed.data,
-        timestamp: Date.now(),
-      };
-
-      handleEvent(sseEvent);
-    };
-
-    source.onerror = (event: Event) => {
-      console.log((event as MessageEvent).data);
-      source.close();
-    };
+    // Open modal and start test
+    if (!open) {
+      toggleOpen(true);
+    }
+    startTest(data);
   };
 
   const transformStatus = (status: string) => {
     return status.replaceAll('_', ' ');
   };
+
+  const handleRetry = () => {
+    const formData = form.getValues();
+    // Modal is already open, just restart the test
+    startTest(formData);
+  };
+
+  const handleModalClose = (isOpen: boolean) => {
+    toggleOpen(isOpen);
+    if (!isOpen) {
+      // Clear form and reset state when modal closes
+      form.reset();
+      resetTestState();
+    }
+  };
+
   return (
     <Homepage>
-      <Modal isOpen={open} onClose={() => toggleOpen((prev) => !prev)}>
-        <div className="grid place-items-center fixed inset-0 m-auto p-4">
-          {status !== 'COMPLETE' ? (
-            <div className="grid place-items-center text-center text-white max-w-lg mx-auto">
-              <div className="mb-6 md:mb-10">
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 md:mb-5">
-                  Performing BugSpy Magic...
-                </h2>
-                <p className="mb-3 md:mb-5 text-sm md:text-base">
-                  {status
-                    ? (STATUS_LABELS[status] ?? transformStatus(status))
-                    : 'Waiting to start...'}
-                </p>
-                <div className="flex gap-2 md:gap-3 justify-center items-center">
-                  <Shield size={20} className="md:w-6 md:h-6" />
-                  <p className="text-sm md:text-base">SECURE DATA PROCESSING</p>
-                </div>
-              </div>
-              <p className="rounded-md border-white bg-blue-400/10 border p-3 md:p-5 text-xs md:text-sm max-w-md">
-                Note: Do not refresh, close or click back button in this page.
-                Your result may be lost.
-              </p>
-            </div>
-          ) : (
-            <div className="bg-white p-4 md:p-6 lg:p-10 rounded-sm w-full max-w-[90vw] md:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-end mb-4 hover:cursor-pointer">
-                <Button
-                  variant={'ghost'}
-                  onClick={() => toggleOpen((prev) => !prev)}
-                  size="sm"
-                >
-                  <XIcon size={20} />
-                </Button>
-              </div>
-              <div className="grid place-items-center">
-                <div className="bg-blue-700/5 p-2 grid place-items-center rounded-xl mb-4">
-                  <SvgIcon iconName="game-icons_test-tube-held" />
-                </div>
-                <h3 className="text-lg md:text-xl font-semibold mb-2 text-center">
-                  Test Completed!
-                </h3>
-                <p className="text-neutral-700 text-sm md:text-base text-center mb-4">
-                  Your website performance report for {form.getValues('url')} is
-                  ready
-                </p>
-                <div className="my-5 w-full rounded-sm">
-                  <div className="h-40 md:h-60">
-                    <div className="px-3 md:px-5 py-3 after:absolute h-full after:bg-black/50 after:inset-0 relative after:block bg-white">
-                      <p className="capitalize text-sm md:text-base">
-                        performance summary
-                      </p>
-                      <Table className="text-xs md:text-sm bg-blue-700/5 my-3 md:my-5">
-                        <TableCaption className="text-xs">
-                          {results &&
-                            results.webMetrics?.opportunities?.[0]?.description}
-                        </TableCaption>
-                        <TableHeader className="capitalize">
-                          <TableRow>
-                            <TableHead className="text-xs md:text-sm">
-                              metric
-                            </TableHead>
-                            <TableHead className="text-xs md:text-sm">
-                              value
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody></TableBody>
-                      </Table>
-                    </div>
+      <Dialog open={open} onOpenChange={handleModalClose}>
+        <DialogContent className="bg-black/50 border-none max-w-full w-full h-full grid place-items-center p-4 backdrop-blur-xs sm:max-w-full">
+          <VisuallyHidden>
+            <DialogTitle>
+              {error ? 'Test Failed' : status !== 'COMPLETE' ? 'Test Running' : 'Test Complete'}
+            </DialogTitle>
+          </VisuallyHidden>
+          <div className="grid place-items-center w-full">
+            {error ? (
+              // Error State
+              <div className="bg-white p-6 md:p-8 lg:p-10 rounded-lg w-full max-w-md mx-auto">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="bg-red-50 p-3 rounded-full shrink-0">
+                    <XCircle size={32} className="text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl md:text-2xl font-bold mb-2 text-gray-900">
+                      Test Failed
+                    </h3>
+                    <p className="text-gray-600 text-sm md:text-base">
+                      {error}
+                    </p>
                   </div>
                 </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 align-center">
-                <Link
-                  to={{
-                    pathname: '/dashboard/reports',
-                    search: `?url=${form.getValues('url')}`,
-                  }}
-                  className="w-full sm:mr-5"
-                >
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Button
-                    className="capitalize w-full bg-blue-600 text-white text-sm"
-                    variant={'link'}
+                    onClick={handleRetry}
+                    className="sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 h-auto"
                   >
-                    view full report
+                    Try Again
                   </Button>
-                </Link>
-                <Button
-                  variant={'outline'}
-                  title="download"
-                  className="w-full sm:w-auto"
-                  size="sm"
-                >
-                  <Download size={16} />
-                  <span className="ml-2 sm:hidden">Download</span>
-                </Button>
+                  <Button
+                    onClick={() => {
+                      toggleOpen(false);
+                      resetTestState();
+                    }}
+                    variant="outline"
+                    className="sm:w-auto px-6 py-3 h-auto"
+                  >
+                    Close
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </Modal>
+            ) : status !== 'COMPLETE' ? (
+              // Loading State - Improved with animations
+              <div className="text-white max-w-lg mx-auto animate-in fade-in zoom-in-95 duration-500">
+                <div className="mb-6 md:mb-10">
+                  {/* Animated spinner */}
+                  <div className="flex justify-center mb-6">
+                    <div className="relative">
+                      <div className="size-20 md:size-24 rounded-full border-4 border-white/20 border-t-white animate-spin"></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Shield size={32} className="text-white/80 animate-pulse md:size-10" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 md:mb-5 text-center">
+                    Performing BugSpy Magic...
+                  </h2>
+
+                  {/* Status with smooth transition */}
+                  <div className="relative h-8 md:h-10 mb-4 overflow-hidden">
+                    <p className="absolute inset-0 flex items-center justify-center text-sm md:text-base animate-pulse">
+                      {status
+                        ? (STATUS_LABELS[status] ?? transformStatus(status))
+                        : 'Initializing test...'}
+                    </p>
+                  </div>
+
+                  {/* Progress dots */}
+                  <div className="flex gap-2 justify-center mb-6">
+                    <div className="size-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.3s]"></div>
+                    <div className="size-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.15s]"></div>
+                    <div className="size-2 rounded-full bg-white/60 animate-bounce"></div>
+                  </div>
+
+                  <div className="flex gap-2 md:gap-3 items-center justify-center bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10">
+                    <Shield size={20} className="md:w-6 md:h-6 text-emerald-400" />
+                    <p className="text-sm md:text-base font-medium">
+                      SECURE DATA PROCESSING
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-lg border-white/30 bg-blue-500/20 backdrop-blur-sm border p-4 md:p-5 text-xs md:text-sm">
+                  <p className="flex items-start gap-2">
+                    <span className="text-lg">ℹ️</span>
+                    <span>
+                      <strong className="font-semibold block mb-1">Important:</strong>
+                      Do not refresh, close, or click the back button. Your test results may be lost.
+                    </span>
+                  </p>
+                </div>
+              </div>
+            ) : (
+              // Complete State - SEOitis Style with Blue Theme
+              (() => {
+                // Calculate dynamic score from actual metrics
+                const calculateScore = () => {
+                  if (!results || typeof results !== 'object' || !('webMetrics' in results)) {
+                    return 50; // Default if no metrics
+                  }
+
+                  const metrics = results.webMetrics as { metrics?: {
+                    firstContentfulPaint?: number;
+                    largestContentfulPaint?: number;
+                    totalBlockingTime?: number;
+                    cumulativeLayoutShift?: number;
+                  }};
+
+                  if (!metrics.metrics) return 50;
+
+                  let score = 100;
+                  const m = metrics.metrics;
+
+                  // FCP scoring (Good: <1.8s, Needs Improvement: 1.8-3s, Poor: >3s)
+                  if (m.firstContentfulPaint) {
+                    if (m.firstContentfulPaint > 3000) score -= 15;
+                    else if (m.firstContentfulPaint > 1800) score -= 7;
+                  }
+
+                  // LCP scoring (Good: <2.5s, Needs Improvement: 2.5-4s, Poor: >4s)
+                  if (m.largestContentfulPaint) {
+                    if (m.largestContentfulPaint > 4000) score -= 20;
+                    else if (m.largestContentfulPaint > 2500) score -= 10;
+                  }
+
+                  // TBT scoring (Good: <200ms, Needs Improvement: 200-600ms, Poor: >600ms)
+                  if (m.totalBlockingTime) {
+                    if (m.totalBlockingTime > 600) score -= 20;
+                    else if (m.totalBlockingTime > 200) score -= 10;
+                  }
+
+                  // CLS scoring (Good: <0.1, Needs Improvement: 0.1-0.25, Poor: >0.25)
+                  if (m.cumulativeLayoutShift) {
+                    if (m.cumulativeLayoutShift > 0.25) score -= 15;
+                    else if (m.cumulativeLayoutShift > 0.1) score -= 8;
+                  }
+
+                  // Console errors penalty
+                  if (results && 'consoleErrors' in results && Array.isArray(results.consoleErrors)) {
+                    const errorCount = results.consoleErrors.length;
+                    score -= Math.min(errorCount * 2, 20); // Max 20 points deduction
+                  }
+
+                  return Math.max(0, Math.min(100, Math.round(score)));
+                };
+
+                const score = calculateScore();
+
+                // Count issues dynamically
+                const countIssues = () => {
+                  let critical = 0, warnings = 0, good = 0;
+
+                  if (!results || typeof results !== 'object' || !('webMetrics' in results)) {
+                    return { critical: 0, warnings: 0, good: 0 };
+                  }
+
+                  const metrics = results.webMetrics as { metrics?: {
+                    firstContentfulPaint?: number;
+                    largestContentfulPaint?: number;
+                    totalBlockingTime?: number;
+                    cumulativeLayoutShift?: number;
+                  }};
+
+                  if (!metrics.metrics) return { critical: 0, warnings: 0, good: 0 };
+                  const m = metrics.metrics;
+
+                  // Check each metric
+                  if (m.firstContentfulPaint) {
+                    if (m.firstContentfulPaint > 3000) critical++;
+                    else if (m.firstContentfulPaint > 1800) warnings++;
+                    else good++;
+                  }
+
+                  if (m.largestContentfulPaint) {
+                    if (m.largestContentfulPaint > 4000) critical++;
+                    else if (m.largestContentfulPaint > 2500) warnings++;
+                    else good++;
+                  }
+
+                  if (m.totalBlockingTime) {
+                    if (m.totalBlockingTime > 600) critical++;
+                    else if (m.totalBlockingTime > 200) warnings++;
+                    else good++;
+                  }
+
+                  if (m.cumulativeLayoutShift) {
+                    if (m.cumulativeLayoutShift > 0.25) critical++;
+                    else if (m.cumulativeLayoutShift > 0.1) warnings++;
+                    else good++;
+                  }
+
+                  // Console errors count as critical
+                  if (results && 'consoleErrors' in results && Array.isArray(results.consoleErrors)) {
+                    critical += results.consoleErrors.length;
+                  }
+
+                  return { critical, warnings, good };
+                };
+
+                const { critical, warnings, good } = countIssues();
+
+                // Determine score color
+                const getScoreColor = (score: number) => {
+                  if (score >= 90) return { stroke: '#10b981', text: 'text-emerald-600' }; // Excellent
+                  if (score >= 70) return { stroke: '#f59e0b', text: 'text-amber-600' }; // Good
+                  return { stroke: '#ef4444', text: 'text-red-600' }; // Poor
+                };
+
+                const scoreColors = getScoreColor(score);
+                const circumference = 314; // 2 * PI * 50
+
+                return (
+                  <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6 md:p-8 w-full max-w-[90vw] md:max-w-4xl max-h-[90vh] overflow-y-auto relative animate-in fade-in zoom-in-95 duration-300">
+                    {/* Subtle gradient background */}
+                    <div className="absolute inset-0 opacity-5 bg-gradient-to-br from-blue-500 to-blue-400 rounded-2xl pointer-events-none"></div>
+
+                    <div className="relative">
+                      <div className="flex justify-end mb-4">
+                        <Button
+                          variant={'ghost'}
+                          onClick={() => {
+                            toggleOpen(false);
+                            resetTestState();
+                          }}
+                          size="sm"
+                          className="hover:bg-gray-100 rounded-full transition-colors"
+                        >
+                          <XIcon size={20} />
+                        </Button>
+                      </div>
+
+                      {/* Header with circular score (SEOitis style) */}
+                      <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 mb-6">
+                        {/* Circular Score Indicator - Dynamic */}
+                        <div className="relative inline-flex items-center justify-center shrink-0">
+                          <svg className="size-24 sm:size-28 transform -rotate-90" viewBox="0 0 120 120">
+                            {/* Background circle */}
+                            <circle
+                              cx="60"
+                              cy="60"
+                              r="50"
+                              fill="none"
+                              stroke="#e5e7eb"
+                              strokeWidth="8"
+                            />
+                            {/* Progress circle - dynamic color based on score */}
+                            <circle
+                              cx="60"
+                              cy="60"
+                              r="50"
+                              fill="none"
+                              stroke={scoreColors.stroke}
+                              strokeWidth="8"
+                              strokeDasharray={`${(score / 100) * circumference} ${circumference}`}
+                              strokeLinecap="round"
+                              className="transition-all duration-1000 ease-out"
+                              style={{
+                                animation: 'draw-circle 1s ease-out forwards'
+                              }}
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className={cn("text-3xl sm:text-4xl font-bold", scoreColors.text)}>{score}</span>
+                            <span className="text-xs text-gray-500">/100</span>
+                          </div>
+                        </div>
+
+                        {/* Test Info */}
+                        <div className="flex-1">
+                          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                            Test Complete
+                          </h3>
+                          <p className="text-sm sm:text-base text-gray-600 mb-3">
+                            Performance analysis for <span className="font-semibold text-blue-600">{form.getValues('url')}</span>
+                          </p>
+
+                          {/* Status indicators - Dynamic counts */}
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                            {critical > 0 && (
+                              <div className="flex items-center gap-1.5">
+                                <div className="size-2 sm:size-2.5 rounded-full bg-red-500 animate-pulse"></div>
+                                <span className="text-xs sm:text-sm text-gray-600">{critical} Critical</span>
+                              </div>
+                            )}
+                            {warnings > 0 && (
+                              <div className="flex items-center gap-1.5">
+                                <div className="size-2 sm:size-2.5 rounded-full bg-amber-500"></div>
+                                <span className="text-xs sm:text-sm text-gray-600">{warnings} {warnings === 1 ? 'Warning' : 'Warnings'}</span>
+                              </div>
+                            )}
+                            {good > 0 && (
+                              <div className="flex items-center gap-1.5">
+                                <div className="size-2 sm:size-2.5 rounded-full bg-emerald-500"></div>
+                                <span className="text-xs sm:text-sm text-gray-600">{good} Good</span>
+                              </div>
+                            )}
+                            {critical === 0 && warnings === 0 && good === 0 && (
+                              <div className="flex items-center gap-1.5">
+                                <div className="size-2 sm:size-2.5 rounded-full bg-gray-400"></div>
+                                <span className="text-xs sm:text-sm text-gray-600">No metrics available</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Metrics Section - SEOitis Style */}
+                    <div className="relative w-full space-y-4 mb-6 pt-4 sm:pt-6 border-t border-gray-100">
+                      <h4 className="text-base font-bold text-gray-800">Performance Metrics</h4>
+
+                      {/* Metrics Grid */}
+                      <div className="space-y-3">
+                      {results && typeof results === 'object' && 'webMetrics' in results && typeof results.webMetrics === 'object' && results.webMetrics && 'metrics' in results.webMetrics && typeof results.webMetrics.metrics === 'object' && results.webMetrics.metrics && 'firstContentfulPaint' in results.webMetrics.metrics && typeof results.webMetrics.metrics.firstContentfulPaint === 'number' && (
+                        <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={cn(
+                                "size-2 rounded-full shrink-0",
+                                results.webMetrics.metrics.firstContentfulPaint < 1800
+                                  ? "bg-emerald-500"
+                                  : results.webMetrics.metrics.firstContentfulPaint < 3000
+                                  ? "bg-amber-500"
+                                  : "bg-red-500"
+                              )}></span>
+                              <span className="text-sm font-medium text-gray-700 truncate">First Contentful Paint</span>
+                            </div>
+                            <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
+                              {(results.webMetrics.metrics.firstContentfulPaint / 1000).toFixed(2)}s
+                            </span>
+                          </div>
+                          <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
+                            <p className="text-xs text-gray-600">
+                              {results.webMetrics.metrics.firstContentfulPaint < 1800
+                                ? "Excellent - content appears quickly"
+                                : results.webMetrics.metrics.firstContentfulPaint < 3000
+                                ? "Moderate - could be improved"
+                                : "Slow - optimize critical rendering path"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {results && typeof results === 'object' && 'webMetrics' in results && typeof results.webMetrics === 'object' && results.webMetrics && 'metrics' in results.webMetrics && typeof results.webMetrics.metrics === 'object' && results.webMetrics.metrics && 'largestContentfulPaint' in results.webMetrics.metrics && typeof results.webMetrics.metrics.largestContentfulPaint === 'number' && (
+                        <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={cn(
+                                "size-2 rounded-full shrink-0",
+                                results.webMetrics.metrics.largestContentfulPaint < 2500
+                                  ? "bg-emerald-500"
+                                  : results.webMetrics.metrics.largestContentfulPaint < 4000
+                                  ? "bg-amber-500"
+                                  : "bg-red-500"
+                              )}></span>
+                              <span className="text-sm font-medium text-gray-700 truncate">Largest Contentful Paint</span>
+                            </div>
+                            <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
+                              {(results.webMetrics.metrics.largestContentfulPaint / 1000).toFixed(2)}s
+                            </span>
+                          </div>
+                          <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
+                            <p className="text-xs text-gray-600">
+                              {results.webMetrics.metrics.largestContentfulPaint < 2500
+                                ? "Excellent - main content loads fast"
+                                : results.webMetrics.metrics.largestContentfulPaint < 4000
+                                ? "Moderate - optimize largest elements"
+                                : "Poor - main content loads slowly"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {results && typeof results === 'object' && 'webMetrics' in results && typeof results.webMetrics === 'object' && results.webMetrics && 'metrics' in results.webMetrics && typeof results.webMetrics.metrics === 'object' && results.webMetrics.metrics && 'totalBlockingTime' in results.webMetrics.metrics && typeof results.webMetrics.metrics.totalBlockingTime === 'number' && (
+                        <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={cn(
+                                "size-2 rounded-full shrink-0",
+                                results.webMetrics.metrics.totalBlockingTime < 200
+                                  ? "bg-emerald-500"
+                                  : results.webMetrics.metrics.totalBlockingTime < 600
+                                  ? "bg-amber-500"
+                                  : "bg-red-500"
+                              )}></span>
+                              <span className="text-sm font-medium text-gray-700 truncate">Total Blocking Time</span>
+                            </div>
+                            <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
+                              {Math.round(results.webMetrics.metrics.totalBlockingTime)}ms
+                            </span>
+                          </div>
+                          <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
+                            <p className="text-xs text-gray-600">
+                              {results.webMetrics.metrics.totalBlockingTime < 200
+                                ? "Excellent - page responds quickly"
+                                : results.webMetrics.metrics.totalBlockingTime < 600
+                                ? "Moderate - reduce JavaScript execution"
+                                : "Poor - significant blocking detected"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {results && typeof results === 'object' && 'webMetrics' in results && typeof results.webMetrics === 'object' && results.webMetrics && 'metrics' in results.webMetrics && typeof results.webMetrics.metrics === 'object' && results.webMetrics.metrics && 'cumulativeLayoutShift' in results.webMetrics.metrics && typeof results.webMetrics.metrics.cumulativeLayoutShift === 'number' && (
+                        <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={cn(
+                                "size-2 rounded-full shrink-0",
+                                results.webMetrics.metrics.cumulativeLayoutShift < 0.1
+                                  ? "bg-emerald-500"
+                                  : results.webMetrics.metrics.cumulativeLayoutShift < 0.25
+                                  ? "bg-amber-500"
+                                  : "bg-red-500"
+                              )}></span>
+                              <span className="text-sm font-medium text-gray-700 truncate">Cumulative Layout Shift</span>
+                            </div>
+                            <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
+                              {(results.webMetrics.metrics.cumulativeLayoutShift).toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
+                            <p className="text-xs text-gray-600">
+                              {results.webMetrics.metrics.cumulativeLayoutShift < 0.1
+                                ? "Excellent - stable visual layout"
+                                : results.webMetrics.metrics.cumulativeLayoutShift < 0.25
+                                ? "Moderate - some layout shifts detected"
+                                : "Poor - significant layout instability"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Console Errors - SEOitis Style */}
+                    {results && typeof results === 'object' && 'consoleErrors' in results && Array.isArray(results.consoleErrors) && results.consoleErrors.length > 0 && (
+                      <div className="mt-4 border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-red-200 hover:shadow-sm transition-all bg-white">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="size-2 rounded-full shrink-0 bg-red-500"></span>
+                            <span className="text-sm font-medium text-gray-700 truncate">Console Errors</span>
+                          </div>
+                          <span className="text-lg sm:text-xl font-bold text-red-600 shrink-0">
+                            {results.consoleErrors.length}
+                          </span>
+                        </div>
+                        <div className="ml-4 p-2 sm:p-3 bg-red-50 rounded-lg border-l-2 border-red-500">
+                          <p className="text-xs text-gray-700 font-medium">
+                            Critical - {results.consoleErrors.length} console {results.consoleErrors.length === 1 ? 'error' : 'errors'} detected during page load
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                      {/* Preview Notice & Action Buttons - Blue Theme */}
+                      <div className="mt-6 space-y-4">
+                        <div className="inline-block p-3 px-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                          <p className="text-sm font-semibold text-gray-800 mb-1">
+                            Limited Preview
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            Sign up for detailed analysis and full reports
+                          </p>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <Link
+                            to="/dashboard"
+                            className="sm:w-auto"
+                          >
+                            <Button
+                              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all px-6 py-3 h-auto"
+                            >
+                              View Report
+                            </Button>
+                          </Link>
+                          <Button
+                            variant={'outline'}
+                            onClick={() => {
+                              toggleOpen(false);
+                              resetTestState();
+                              openSignupModal();
+                            }}
+                            className="sm:w-auto border-gray-300 text-gray-900 hover:bg-gray-50 transition-all px-6 py-3 h-auto"
+                          >
+                            Sign Up
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <section
         className={cn('container m-auto pt-[32px] px-4 md:px-8 lg:px-[75px]')}
@@ -312,7 +806,7 @@ const Index = () => {
                         type="text"
                         placeholder="https://example.com"
                         className={cn(
-                          'h-12 text-base px-4 bg-white border border-gray-300 rounded-lg',
+                          'h-12 text-sm px-4 bg-white border border-gray-300 rounded-lg',
                           'focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all',
                           'hover:border-gray-400 placeholder:text-gray-400',
                           fieldState.invalid &&
@@ -346,7 +840,7 @@ const Index = () => {
                         <SelectTrigger
                           id="testType"
                           className={cn(
-                            '!h-12 text-base px-4 bg-white border border-gray-300 rounded-lg',
+                            '!h-12 text-sm px-4 bg-white border border-gray-300 rounded-lg',
                             'focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all',
                             'hover:border-gray-400',
                             fieldState.invalid &&
@@ -398,7 +892,7 @@ const Index = () => {
                         <SelectTrigger
                           id="deviceType"
                           className={cn(
-                            '!h-12 text-base px-4 bg-white border border-gray-300 rounded-lg',
+                            '!h-12 text-sm px-4 bg-white border border-gray-300 rounded-lg',
                             'focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all',
                             'hover:border-gray-400',
                             fieldState.invalid &&
@@ -441,14 +935,15 @@ const Index = () => {
                   size={null}
                   variant={null}
                   className={cn(
-                    '!h-12 !min-h-[48px] !max-h-[48px] !leading-[48px] px-8 text-base font-semibold rounded-lg w-full md:w-auto',
-                    'bg-blue-600 hover:bg-blue-700 text-white !py-0',
+                    '!h-12 !min-h-[48px] !max-h-[48px] px-8 text-sm font-semibold rounded-lg w-full md:w-auto',
+                    'bg-blue-600 hover:bg-blue-700 text-white',
                     'transition-all duration-200 inline-flex items-center justify-center',
                     'disabled:opacity-50 disabled:cursor-not-allowed',
                   )}
                   type="submit"
+                  disabled={isLoading}
                 >
-                  Start Test
+                  {isLoading ? 'Testing...' : 'Start Test'}
                 </Button>
               </div>
             </form>

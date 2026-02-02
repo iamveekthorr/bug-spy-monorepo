@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   TrendingUp,
   TrendingDown,
@@ -16,77 +17,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { TestResult } from '@/types';
 import { useDashboardStats, useUserTests } from '@/hooks/useDashboard';
-
-// Mock data for recent tests
-const mockRecentTests: TestResult[] = [
-  {
-    id: '1',
-    url: 'https://example.com',
-    status: 'COMPLETE',
-    createdAt: '2024-01-07T10:30:00Z',
-    testType: 'performance',
-    deviceType: 'desktop',
-    results: {
-      performanceMetrics: {
-        firstContentfulPaint: 1.2,
-        largestContentfulPaint: 2.1,
-        cumulativeLayoutShift: 0.05,
-        totalBlockingTime: 150,
-        speedIndex: 1.8,
-        performanceScore: 85,
-        opportunities: [],
-      },
-      errors: [],
-      screenshots: [],
-      networkRequests: [],
-      consoleMessages: [],
-      accessibilityIssues: [],
-    },
-  },
-  {
-    id: '2',
-    url: 'https://mysite.com',
-    status: 'COMPLETE',
-    createdAt: '2024-01-07T09:15:00Z',
-    testType: 'full',
-    deviceType: 'mobile',
-    results: {
-      performanceMetrics: {
-        firstContentfulPaint: 2.1,
-        largestContentfulPaint: 3.8,
-        cumulativeLayoutShift: 0.15,
-        totalBlockingTime: 320,
-        speedIndex: 3.2,
-        performanceScore: 72,
-        opportunities: [],
-      },
-      errors: [
-        { id: '1', type: 'network', severity: 'high', message: 'Failed to load resource', timestamp: Date.now() },
-        { id: '2', type: 'console', severity: 'medium', message: 'Warning message', timestamp: Date.now() },
-      ],
-      screenshots: [],
-      networkRequests: [],
-      consoleMessages: [],
-      accessibilityIssues: [],
-    },
-  },
-  {
-    id: '3',
-    url: 'https://webapp.io',
-    status: 'FAILED',
-    createdAt: '2024-01-07T08:45:00Z',
-    testType: 'ui',
-    deviceType: 'tablet',
-  },
-  {
-    id: '4',
-    url: 'https://testsite.net',
-    status: 'RUNNING',
-    createdAt: '2024-01-07T11:00:00Z',
-    testType: 'performance',
-    deviceType: 'desktop',
-  },
-];
+import { StartTestModal, type TestParams } from './StartTestModal';
+import { testsAPI } from '@/lib/api/tests';
+import { indexedDBService } from '@/lib/indexedDB';
+import { useAuthStore } from '@/store';
 
 const StatCard = ({ 
   title, 
@@ -152,13 +86,75 @@ const TestStatusBadge = ({ status }: { status: string }) => {
 };
 
 const DashboardOverview = () => {
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: userTests = [], isLoading: testsLoading } = useUserTests();
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+  const [isRunningTest, setIsRunningTest] = useState(false);
+
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useDashboardStats();
+  const {
+    data: userTests = [],
+    isLoading: testsLoading,
+    error: testsError,
+  } = useUserTests();
 
   const isLoading = statsLoading || testsLoading;
+  const hasError = statsError || testsError;
 
-  // Use real tests from API, fallback to mock if empty
-  const recentTests = userTests.length > 0 ? userTests : mockRecentTests;
+  // Use only real tests from API - no mock data
+  const recentTests = userTests || [];
+
+  const handleStartTest = async (params: TestParams) => {
+    setIsRunningTest(true);
+
+    try {
+      // Start the test using SSE
+      const eventSource = testsAPI.startSingleTest(params);
+
+      eventSource.onmessage = async (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'complete') {
+          console.log('✅ Test completed:', data.data);
+
+          // Save to IndexedDB if user is not authenticated
+          if (!user) {
+            await indexedDBService.saveTestResult({
+              url: params.url,
+              testType: params.testType,
+              deviceType: params.deviceType,
+              results: data.data,
+              timestamp: Date.now(),
+              syncedToServer: false,
+            });
+          }
+
+          eventSource.close();
+          setIsRunningTest(false);
+
+          // Navigate to tests page
+          navigate('/dashboard/tests');
+        } else if (data.type === 'error') {
+          console.error('❌ Test failed:', data.data);
+          eventSource.close();
+          setIsRunningTest(false);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('❌ SSE error:', error);
+        eventSource.close();
+        setIsRunningTest(false);
+      };
+    } catch (error) {
+      console.error('❌ Failed to start test:', error);
+      setIsRunningTest(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
@@ -179,6 +175,10 @@ const DashboardOverview = () => {
   if (isLoading) {
     return (
       <div className="p-6 space-y-6">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-lg animate-pulse">
+          <div className="h-8 bg-blue-500 rounded w-1/3 mb-2"></div>
+          <div className="h-4 bg-blue-500 rounded w-1/2"></div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="bg-white p-6 rounded-lg border border-gray-200 animate-pulse">
@@ -186,6 +186,37 @@ const DashboardOverview = () => {
               <div className="h-8 bg-gray-200 rounded w-1/2"></div>
             </div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center space-x-3">
+            <AlertTriangle size={24} className="text-red-600" />
+            <div>
+              <h3 className="text-lg font-semibold text-red-900">
+                Error Loading Dashboard
+              </h3>
+              <p className="text-red-700 mt-1">
+                {statsError instanceof Error
+                  ? statsError.message
+                  : testsError instanceof Error
+                    ? testsError.message
+                    : 'Failed to load dashboard data. Please try again.'}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => window.location.reload()}
+          >
+            Refresh Page
+          </Button>
         </div>
       </div>
     );
@@ -206,31 +237,47 @@ const DashboardOverview = () => {
         <StatCard
           title="Total Tests"
           value={stats?.totalTests || 0}
-          change="+12 this week"
-          trend="up"
+          change={
+            stats?.changes?.totalTests
+              ? `${stats.changes.totalTests.trend === 'up' ? '+' : stats.changes.totalTests.trend === 'down' ? '-' : ''}${Math.abs(stats.changes.totalTests.value)} this week`
+              : undefined
+          }
+          trend={stats?.changes?.totalTests?.trend}
           icon={TestTube}
           href="/dashboard/tests"
         />
         <StatCard
           title="This Month"
           value={stats?.testsThisMonth || 0}
-          change="+8.2% vs last month"
-          trend="up"
+          change={
+            stats?.changes?.testsThisMonth
+              ? `${stats.changes.testsThisMonth.percentage}% vs last month`
+              : undefined
+          }
+          trend={stats?.changes?.testsThisMonth?.trend}
           icon={Calendar}
           href="/dashboard/tests"
         />
         <StatCard
           title="Avg Performance"
           value={`${stats?.averageScore || 0}%`}
-          change="+2.1% improvement"
-          trend="up"
+          change={
+            stats?.changes?.averageScore && stats.changes.averageScore.value !== 0
+              ? `${stats.changes.averageScore.percentage}% ${stats.changes.averageScore.trend === 'up' ? 'improvement' : stats.changes.averageScore.trend === 'down' ? 'decrease' : ''}`
+              : undefined
+          }
+          trend={stats?.changes?.averageScore?.trend}
           icon={BarChart3}
         />
         <StatCard
           title="Critical Issues"
           value={stats?.criticalIssues || 0}
-          change="-3 resolved"
-          trend="down"
+          change={
+            stats?.changes?.criticalIssues
+              ? `${Math.abs(stats.changes.criticalIssues.value)} ${stats.changes.criticalIssues.trend === 'down' ? 'resolved' : stats.changes.criticalIssues.trend === 'up' ? 'new' : 'total'}`
+              : undefined
+          }
+          trend={stats?.changes?.criticalIssues?.trend}
           icon={AlertTriangle}
           href="/dashboard/reports"
         />
@@ -274,7 +321,7 @@ const DashboardOverview = () => {
                             <span className="text-xs text-gray-500 capitalize">
                               {test.testType} • {test.deviceType}
                             </span>
-                            {test.results?.performanceMetrics.performanceScore && (
+                            {test.results?.performanceMetrics?.performanceScore && (
                               <span className={cn(
                                 'text-xs font-medium',
                                 getPerformanceColor(test.results.performanceMetrics.performanceScore)
@@ -305,9 +352,9 @@ const DashboardOverview = () => {
                   <TestTube size={48} className="mx-auto text-gray-400 mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No tests yet</h3>
                   <p className="text-gray-500 mb-4">Get started by running your first website test.</p>
-                  <Link to="/">
-                    <Button>Start Test</Button>
-                  </Link>
+                  <Button onClick={() => setIsTestModalOpen(true)} disabled={isRunningTest}>
+                    {isRunningTest ? 'Running Test...' : 'Start Test'}
+                  </Button>
                 </div>
               )}
             </div>
@@ -320,12 +367,15 @@ const DashboardOverview = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
             <div className="space-y-3">
-              <Link to="/" className="block">
-                <Button variant="outline" className="w-full justify-start">
-                  <TestTube size={16} className="mr-2" />
-                  Run New Test
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setIsTestModalOpen(true)}
+                disabled={isRunningTest}
+              >
+                <TestTube size={16} className="mr-2" />
+                {isRunningTest ? 'Running Test...' : 'Run New Test'}
+              </Button>
               <Link to="/dashboard/scheduled" className="block">
                 <Button variant="outline" className="w-full justify-start">
                   <Calendar size={16} className="mr-2" />
@@ -343,21 +393,27 @@ const DashboardOverview = () => {
 
           {/* Performance trend */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Performance Trend</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Test Activity</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">This week</span>
-                <span className="font-medium text-green-600">+2.4%</span>
+                <span className="font-medium text-blue-600">
+                  {stats?.performanceTrend?.thisWeek || 0} tests
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">This month</span>
-                <span className="font-medium text-green-600">+5.8%</span>
+                <span className="font-medium text-blue-600">
+                  {stats?.performanceTrend?.thisMonth || 0} tests
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Last 3 months</span>
-                <span className="font-medium text-green-600">+12.1%</span>
+                <span className="font-medium text-blue-600">
+                  {stats?.performanceTrend?.lastThreeMonths || 0} tests
+                </span>
               </div>
-              
+
               {/* Simple chart placeholder */}
               <div className="mt-6 h-32 bg-gray-50 rounded-md flex items-center justify-center">
                 <Activity size={32} className="text-gray-400" />
@@ -366,6 +422,13 @@ const DashboardOverview = () => {
           </div>
         </div>
       </div>
+
+      {/* Start Test Modal */}
+      <StartTestModal
+        isOpen={isTestModalOpen}
+        onClose={() => setIsTestModalOpen(false)}
+        onSubmit={handleStartTest}
+      />
     </div>
   );
 };

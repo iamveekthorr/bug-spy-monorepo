@@ -128,9 +128,13 @@ const TestsPage = () => {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
 
-  const { data: userTests = [], isLoading } = useUserTests();
+  const {
+    data: userTests = [],
+    isLoading,
+    error,
+  } = useUserTests();
 
-  // Use real tests from API, fallback to mock if empty
+  // Use real tests from API, fallback to mock if empty during development
   const tests = userTests.length > 0 ? userTests : mockTests;
 
   // Filter tests based on current filters and search
@@ -225,8 +229,46 @@ const TestsPage = () => {
       <div className="p-6 space-y-6">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          <div className="mt-6 h-32 bg-gray-200 rounded"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
+          <div className="h-16 bg-gray-200 rounded mb-6"></div>
+          <div className="space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-20 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Tests</h1>
+          <p className="text-gray-600 mt-1">View and manage your website test results</p>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center space-x-3">
+            <AlertTriangle size={24} className="text-red-600" />
+            <div>
+              <h3 className="text-lg font-semibold text-red-900">
+                Error Loading Tests
+              </h3>
+              <p className="text-red-700 mt-1">
+                {error instanceof Error
+                  ? error.message
+                  : 'Failed to load test results. Please try again.'}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => window.location.reload()}
+          >
+            Refresh Page
+          </Button>
         </div>
       </div>
     );
@@ -292,7 +334,15 @@ const TestsPage = () => {
               </SelectContent>
             </Select>
 
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchQuery('');
+                setFilters({ status: [], testType: [], deviceType: [] });
+                setSearchParams({});
+              }}
+            >
               <Filter size={16} className="mr-2" />
               Clear
             </Button>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import {
   Home,
@@ -12,17 +12,23 @@ import {
   X,
   LogOut,
   ChevronDown,
+  History,
+  BarChart3,
+  Layers,
 } from 'lucide-react';
 import { useAuthStore, useUIStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { NavItem } from '@/types';
+import { useTestSync } from '@/hooks/useTestSync';
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: 'Home' },
   { name: 'Tests', href: '/dashboard/tests', icon: 'TestTube' },
-  { name: 'Reports', href: '/dashboard/reports', icon: 'FileText' },
+  { name: 'History', href: '/dashboard/history', icon: 'History' },
+  { name: 'Analytics', href: '/dashboard/analytics', icon: 'BarChart3' },
   { name: 'Scheduled', href: '/dashboard/scheduled', icon: 'Calendar' },
+  { name: 'Batch Tests', href: '/dashboard/batch-tests', icon: 'Layers' },
   { name: 'Settings', href: '/dashboard/settings', icon: 'Settings' },
 ];
 
@@ -32,6 +38,9 @@ const iconMap = {
   FileText,
   Calendar,
   Settings,
+  History,
+  BarChart3,
+  Layers,
 };
 
 const DashboardLayout = () => {
@@ -40,6 +49,19 @@ const DashboardLayout = () => {
   const { user, logout } = useAuthStore();
   const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUIStore();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  // Sync IndexedDB tests with backend when user logs in
+  const { isSyncing, syncError, syncStats } = useTestSync();
+
+  // Show sync notification
+  useEffect(() => {
+    if (syncStats && syncStats.syncedCount > 0) {
+      console.log(`✅ Synced ${syncStats.syncedCount} local tests to your account`);
+    }
+    if (syncError) {
+      console.error('❌ Failed to sync local tests:', syncError);
+    }
+  }, [syncStats, syncError]);
 
   const handleLogout = () => {
     logout();
