@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Controller, useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -58,6 +58,8 @@ const schema = z.object({
 });
 
 type InputData = z.infer<typeof schema>;
+
+const timestamp = Date.now();
 
 const normalizeUrl = (input: string): string => {
   let url = input.trim();
@@ -135,7 +137,7 @@ const Index = () => {
           testType: formValues.testType,
           deviceType: formValues.deviceType,
           results: event.results || {},
-          timestamp: Date.now(),
+          timestamp,
           syncedToServer: false,
         });
       } catch (error) {
@@ -159,7 +161,8 @@ const Index = () => {
       setError(null);
 
       const normalizedUrl = normalizeUrl(data.url);
-      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
+      const apiBaseUrl =
+        import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
       const url = new URL(`${apiBaseUrl}/capture-metrics/single`);
       url.searchParams.set('url', normalizedUrl);
 
@@ -257,13 +260,52 @@ const Index = () => {
     }
   };
 
+  // Typing animation for hero section
+  const words = useMemo(() => ['Faster.', 'Smarter.', 'Better.'], []);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [currentText, setCurrentText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const currentWord = words[currentWordIndex];
+    const typingSpeed = isDeleting ? 50 : 100;
+    const pauseTime = isDeleting ? 500 : 2000;
+
+    const timer = setTimeout(() => {
+      if (!isDeleting) {
+        // Typing
+        if (currentText.length < currentWord.length) {
+          setCurrentText(currentWord.substring(0, currentText.length + 1));
+        } else {
+          // Pause before deleting
+          setTimeout(() => setIsDeleting(true), pauseTime);
+        }
+      } else {
+        // Deleting
+        if (currentText.length > 0) {
+          setCurrentText(currentText.substring(0, currentText.length - 1));
+        } else {
+          // Move to next word
+          setIsDeleting(false);
+          setCurrentWordIndex((prev) => (prev + 1) % words.length);
+        }
+      }
+    }, typingSpeed);
+
+    return () => clearTimeout(timer);
+  }, [currentText, isDeleting, currentWordIndex, words]);
+
   return (
     <Homepage>
       <Dialog open={open} onOpenChange={handleModalClose}>
         <DialogContent className="bg-black/50 border-none max-w-full w-full h-full grid place-items-center p-4 backdrop-blur-xs sm:max-w-full">
           <VisuallyHidden>
             <DialogTitle>
-              {error ? 'Test Failed' : status !== 'COMPLETE' ? 'Test Running' : 'Test Complete'}
+              {error
+                ? 'Test Failed'
+                : status !== 'COMPLETE'
+                  ? 'Test Running'
+                  : 'Test Complete'}
             </DialogTitle>
           </VisuallyHidden>
           <div className="grid place-items-center w-full">
@@ -311,7 +353,10 @@ const Index = () => {
                     <div className="relative">
                       <div className="size-20 md:size-24 rounded-full border-4 border-white/20 border-t-white animate-spin"></div>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <Shield size={32} className="text-white/80 animate-pulse md:size-10" />
+                        <Shield
+                          size={32}
+                          className="text-white/80 animate-pulse md:size-10"
+                        />
                       </div>
                     </div>
                   </div>
@@ -337,7 +382,10 @@ const Index = () => {
                   </div>
 
                   <div className="flex gap-2 md:gap-3 items-center justify-center bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10">
-                    <Shield size={20} className="md:w-6 md:h-6 text-emerald-400" />
+                    <Shield
+                      size={20}
+                      className="md:w-6 md:h-6 text-emerald-400"
+                    />
                     <p className="text-sm md:text-base font-medium">
                       SECURE DATA PROCESSING
                     </p>
@@ -347,8 +395,11 @@ const Index = () => {
                   <p className="flex items-start gap-2">
                     <span className="text-lg">ℹ️</span>
                     <span>
-                      <strong className="font-semibold block mb-1">Important:</strong>
-                      Do not refresh, close, or click the back button. Your test results may be lost.
+                      <strong className="font-semibold block mb-1">
+                        Important:
+                      </strong>
+                      Do not refresh, close, or click the back button. Your test
+                      results may be lost.
                     </span>
                   </p>
                 </div>
@@ -358,16 +409,22 @@ const Index = () => {
               (() => {
                 // Calculate dynamic score from actual metrics
                 const calculateScore = () => {
-                  if (!results || typeof results !== 'object' || !('webMetrics' in results)) {
+                  if (
+                    !results ||
+                    typeof results !== 'object' ||
+                    !('webMetrics' in results)
+                  ) {
                     return 50; // Default if no metrics
                   }
 
-                  const metrics = results.webMetrics as { metrics?: {
-                    firstContentfulPaint?: number;
-                    largestContentfulPaint?: number;
-                    totalBlockingTime?: number;
-                    cumulativeLayoutShift?: number;
-                  }};
+                  const metrics = results.webMetrics as {
+                    metrics?: {
+                      firstContentfulPaint?: number;
+                      largestContentfulPaint?: number;
+                      totalBlockingTime?: number;
+                      cumulativeLayoutShift?: number;
+                    };
+                  };
 
                   if (!metrics.metrics) return 50;
 
@@ -399,7 +456,11 @@ const Index = () => {
                   }
 
                   // Console errors penalty
-                  if (results && 'consoleErrors' in results && Array.isArray(results.consoleErrors)) {
+                  if (
+                    results &&
+                    'consoleErrors' in results &&
+                    Array.isArray(results.consoleErrors)
+                  ) {
                     const errorCount = results.consoleErrors.length;
                     score -= Math.min(errorCount * 2, 20); // Max 20 points deduction
                   }
@@ -411,20 +472,29 @@ const Index = () => {
 
                 // Count issues dynamically
                 const countIssues = () => {
-                  let critical = 0, warnings = 0, good = 0;
+                  let critical = 0,
+                    warnings = 0,
+                    good = 0;
 
-                  if (!results || typeof results !== 'object' || !('webMetrics' in results)) {
+                  if (
+                    !results ||
+                    typeof results !== 'object' ||
+                    !('webMetrics' in results)
+                  ) {
                     return { critical: 0, warnings: 0, good: 0 };
                   }
 
-                  const metrics = results.webMetrics as { metrics?: {
-                    firstContentfulPaint?: number;
-                    largestContentfulPaint?: number;
-                    totalBlockingTime?: number;
-                    cumulativeLayoutShift?: number;
-                  }};
+                  const metrics = results.webMetrics as {
+                    metrics?: {
+                      firstContentfulPaint?: number;
+                      largestContentfulPaint?: number;
+                      totalBlockingTime?: number;
+                      cumulativeLayoutShift?: number;
+                    };
+                  };
 
-                  if (!metrics.metrics) return { critical: 0, warnings: 0, good: 0 };
+                  if (!metrics.metrics)
+                    return { critical: 0, warnings: 0, good: 0 };
                   const m = metrics.metrics;
 
                   // Check each metric
@@ -453,7 +523,11 @@ const Index = () => {
                   }
 
                   // Console errors count as critical
-                  if (results && 'consoleErrors' in results && Array.isArray(results.consoleErrors)) {
+                  if (
+                    results &&
+                    'consoleErrors' in results &&
+                    Array.isArray(results.consoleErrors)
+                  ) {
                     critical += results.consoleErrors.length;
                   }
 
@@ -464,8 +538,10 @@ const Index = () => {
 
                 // Determine score color
                 const getScoreColor = (score: number) => {
-                  if (score >= 90) return { stroke: '#10b981', text: 'text-emerald-600' }; // Excellent
-                  if (score >= 70) return { stroke: '#f59e0b', text: 'text-amber-600' }; // Good
+                  if (score >= 90)
+                    return { stroke: '#10b981', text: 'text-emerald-600' }; // Excellent
+                  if (score >= 70)
+                    return { stroke: '#f59e0b', text: 'text-amber-600' }; // Good
                   return { stroke: '#ef4444', text: 'text-red-600' }; // Poor
                 };
 
@@ -496,7 +572,10 @@ const Index = () => {
                       <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 mb-6">
                         {/* Circular Score Indicator - Dynamic */}
                         <div className="relative inline-flex items-center justify-center shrink-0">
-                          <svg className="size-24 sm:size-28 transform -rotate-90" viewBox="0 0 120 120">
+                          <svg
+                            className="size-24 sm:size-28 transform -rotate-90"
+                            viewBox="0 0 120 120"
+                          >
                             {/* Background circle */}
                             <circle
                               cx="60"
@@ -518,12 +597,19 @@ const Index = () => {
                               strokeLinecap="round"
                               className="transition-all duration-1000 ease-out"
                               style={{
-                                animation: 'draw-circle 1s ease-out forwards'
+                                animation: 'draw-circle 1s ease-out forwards',
                               }}
                             />
                           </svg>
                           <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className={cn("text-3xl sm:text-4xl font-bold", scoreColors.text)}>{score}</span>
+                            <span
+                              className={cn(
+                                'text-3xl sm:text-4xl font-bold',
+                                scoreColors.text,
+                              )}
+                            >
+                              {score}
+                            </span>
                             <span className="text-xs text-gray-500">/100</span>
                           </div>
                         </div>
@@ -534,7 +620,10 @@ const Index = () => {
                             Test Complete
                           </h3>
                           <p className="text-sm sm:text-base text-gray-600 mb-3">
-                            Performance analysis for <span className="font-semibold text-blue-600">{form.getValues('url')}</span>
+                            Performance analysis for{' '}
+                            <span className="font-semibold text-blue-600">
+                              {form.getValues('url')}
+                            </span>
                           </p>
 
                           {/* Status indicators - Dynamic counts */}
@@ -542,25 +631,34 @@ const Index = () => {
                             {critical > 0 && (
                               <div className="flex items-center gap-1.5">
                                 <div className="size-2 sm:size-2.5 rounded-full bg-red-500 animate-pulse"></div>
-                                <span className="text-xs sm:text-sm text-gray-600">{critical} Critical</span>
+                                <span className="text-xs sm:text-sm text-gray-600">
+                                  {critical} Critical
+                                </span>
                               </div>
                             )}
                             {warnings > 0 && (
                               <div className="flex items-center gap-1.5">
                                 <div className="size-2 sm:size-2.5 rounded-full bg-amber-500"></div>
-                                <span className="text-xs sm:text-sm text-gray-600">{warnings} {warnings === 1 ? 'Warning' : 'Warnings'}</span>
+                                <span className="text-xs sm:text-sm text-gray-600">
+                                  {warnings}{' '}
+                                  {warnings === 1 ? 'Warning' : 'Warnings'}
+                                </span>
                               </div>
                             )}
                             {good > 0 && (
                               <div className="flex items-center gap-1.5">
                                 <div className="size-2 sm:size-2.5 rounded-full bg-emerald-500"></div>
-                                <span className="text-xs sm:text-sm text-gray-600">{good} Good</span>
+                                <span className="text-xs sm:text-sm text-gray-600">
+                                  {good} Good
+                                </span>
                               </div>
                             )}
                             {critical === 0 && warnings === 0 && good === 0 && (
                               <div className="flex items-center gap-1.5">
                                 <div className="size-2 sm:size-2.5 rounded-full bg-gray-400"></div>
-                                <span className="text-xs sm:text-sm text-gray-600">No metrics available</span>
+                                <span className="text-xs sm:text-sm text-gray-600">
+                                  No metrics available
+                                </span>
                               </div>
                             )}
                           </div>
@@ -570,150 +668,252 @@ const Index = () => {
 
                     {/* Metrics Section - SEOitis Style */}
                     <div className="relative w-full space-y-4 mb-6 pt-4 sm:pt-6 border-t border-gray-100">
-                      <h4 className="text-base font-bold text-gray-800">Performance Metrics</h4>
+                      <h4 className="text-base font-bold text-gray-800">
+                        Performance Metrics
+                      </h4>
 
                       {/* Metrics Grid */}
                       <div className="space-y-3">
-                      {results && typeof results === 'object' && 'webMetrics' in results && typeof results.webMetrics === 'object' && results.webMetrics && 'metrics' in results.webMetrics && typeof results.webMetrics.metrics === 'object' && results.webMetrics.metrics && 'firstContentfulPaint' in results.webMetrics.metrics && typeof results.webMetrics.metrics.firstContentfulPaint === 'number' && (
-                        <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className={cn(
-                                "size-2 rounded-full shrink-0",
-                                results.webMetrics.metrics.firstContentfulPaint < 1800
-                                  ? "bg-emerald-500"
-                                  : results.webMetrics.metrics.firstContentfulPaint < 3000
-                                  ? "bg-amber-500"
-                                  : "bg-red-500"
-                              )}></span>
-                              <span className="text-sm font-medium text-gray-700 truncate">First Contentful Paint</span>
+                        {results &&
+                          typeof results === 'object' &&
+                          'webMetrics' in results &&
+                          typeof results.webMetrics === 'object' &&
+                          results.webMetrics &&
+                          'metrics' in results.webMetrics &&
+                          typeof results.webMetrics.metrics === 'object' &&
+                          results.webMetrics.metrics &&
+                          'firstContentfulPaint' in
+                            results.webMetrics.metrics &&
+                          typeof results.webMetrics.metrics
+                            .firstContentfulPaint === 'number' && (
+                            <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span
+                                    className={cn(
+                                      'size-2 rounded-full shrink-0',
+                                      results.webMetrics.metrics
+                                        .firstContentfulPaint < 1800
+                                        ? 'bg-emerald-500'
+                                        : results.webMetrics.metrics
+                                              .firstContentfulPaint < 3000
+                                          ? 'bg-amber-500'
+                                          : 'bg-red-500',
+                                    )}
+                                  ></span>
+                                  <span className="text-sm font-medium text-gray-700 truncate">
+                                    First Contentful Paint
+                                  </span>
+                                </div>
+                                <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
+                                  {(
+                                    results.webMetrics.metrics
+                                      .firstContentfulPaint / 1000
+                                  ).toFixed(2)}
+                                  s
+                                </span>
+                              </div>
+                              <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
+                                <p className="text-xs text-gray-600">
+                                  {results.webMetrics.metrics
+                                    .firstContentfulPaint < 1800
+                                    ? 'Excellent - content appears quickly'
+                                    : results.webMetrics.metrics
+                                          .firstContentfulPaint < 3000
+                                      ? 'Moderate - could be improved'
+                                      : 'Slow - optimize critical rendering path'}
+                                </p>
+                              </div>
                             </div>
-                            <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
-                              {(results.webMetrics.metrics.firstContentfulPaint / 1000).toFixed(2)}s
-                            </span>
-                          </div>
-                          <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
-                            <p className="text-xs text-gray-600">
-                              {results.webMetrics.metrics.firstContentfulPaint < 1800
-                                ? "Excellent - content appears quickly"
-                                : results.webMetrics.metrics.firstContentfulPaint < 3000
-                                ? "Moderate - could be improved"
-                                : "Slow - optimize critical rendering path"}
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                          )}
 
-                      {results && typeof results === 'object' && 'webMetrics' in results && typeof results.webMetrics === 'object' && results.webMetrics && 'metrics' in results.webMetrics && typeof results.webMetrics.metrics === 'object' && results.webMetrics.metrics && 'largestContentfulPaint' in results.webMetrics.metrics && typeof results.webMetrics.metrics.largestContentfulPaint === 'number' && (
-                        <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className={cn(
-                                "size-2 rounded-full shrink-0",
-                                results.webMetrics.metrics.largestContentfulPaint < 2500
-                                  ? "bg-emerald-500"
-                                  : results.webMetrics.metrics.largestContentfulPaint < 4000
-                                  ? "bg-amber-500"
-                                  : "bg-red-500"
-                              )}></span>
-                              <span className="text-sm font-medium text-gray-700 truncate">Largest Contentful Paint</span>
+                        {results &&
+                          typeof results === 'object' &&
+                          'webMetrics' in results &&
+                          typeof results.webMetrics === 'object' &&
+                          results.webMetrics &&
+                          'metrics' in results.webMetrics &&
+                          typeof results.webMetrics.metrics === 'object' &&
+                          results.webMetrics.metrics &&
+                          'largestContentfulPaint' in
+                            results.webMetrics.metrics &&
+                          typeof results.webMetrics.metrics
+                            .largestContentfulPaint === 'number' && (
+                            <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span
+                                    className={cn(
+                                      'size-2 rounded-full shrink-0',
+                                      results.webMetrics.metrics
+                                        .largestContentfulPaint < 2500
+                                        ? 'bg-emerald-500'
+                                        : results.webMetrics.metrics
+                                              .largestContentfulPaint < 4000
+                                          ? 'bg-amber-500'
+                                          : 'bg-red-500',
+                                    )}
+                                  ></span>
+                                  <span className="text-sm font-medium text-gray-700 truncate">
+                                    Largest Contentful Paint
+                                  </span>
+                                </div>
+                                <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
+                                  {(
+                                    results.webMetrics.metrics
+                                      .largestContentfulPaint / 1000
+                                  ).toFixed(2)}
+                                  s
+                                </span>
+                              </div>
+                              <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
+                                <p className="text-xs text-gray-600">
+                                  {results.webMetrics.metrics
+                                    .largestContentfulPaint < 2500
+                                    ? 'Excellent - main content loads fast'
+                                    : results.webMetrics.metrics
+                                          .largestContentfulPaint < 4000
+                                      ? 'Moderate - optimize largest elements'
+                                      : 'Poor - main content loads slowly'}
+                                </p>
+                              </div>
                             </div>
-                            <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
-                              {(results.webMetrics.metrics.largestContentfulPaint / 1000).toFixed(2)}s
-                            </span>
-                          </div>
-                          <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
-                            <p className="text-xs text-gray-600">
-                              {results.webMetrics.metrics.largestContentfulPaint < 2500
-                                ? "Excellent - main content loads fast"
-                                : results.webMetrics.metrics.largestContentfulPaint < 4000
-                                ? "Moderate - optimize largest elements"
-                                : "Poor - main content loads slowly"}
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                          )}
 
-                      {results && typeof results === 'object' && 'webMetrics' in results && typeof results.webMetrics === 'object' && results.webMetrics && 'metrics' in results.webMetrics && typeof results.webMetrics.metrics === 'object' && results.webMetrics.metrics && 'totalBlockingTime' in results.webMetrics.metrics && typeof results.webMetrics.metrics.totalBlockingTime === 'number' && (
-                        <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className={cn(
-                                "size-2 rounded-full shrink-0",
-                                results.webMetrics.metrics.totalBlockingTime < 200
-                                  ? "bg-emerald-500"
-                                  : results.webMetrics.metrics.totalBlockingTime < 600
-                                  ? "bg-amber-500"
-                                  : "bg-red-500"
-                              )}></span>
-                              <span className="text-sm font-medium text-gray-700 truncate">Total Blocking Time</span>
+                        {results &&
+                          typeof results === 'object' &&
+                          'webMetrics' in results &&
+                          typeof results.webMetrics === 'object' &&
+                          results.webMetrics &&
+                          'metrics' in results.webMetrics &&
+                          typeof results.webMetrics.metrics === 'object' &&
+                          results.webMetrics.metrics &&
+                          'totalBlockingTime' in results.webMetrics.metrics &&
+                          typeof results.webMetrics.metrics
+                            .totalBlockingTime === 'number' && (
+                            <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span
+                                    className={cn(
+                                      'size-2 rounded-full shrink-0',
+                                      results.webMetrics.metrics
+                                        .totalBlockingTime < 200
+                                        ? 'bg-emerald-500'
+                                        : results.webMetrics.metrics
+                                              .totalBlockingTime < 600
+                                          ? 'bg-amber-500'
+                                          : 'bg-red-500',
+                                    )}
+                                  ></span>
+                                  <span className="text-sm font-medium text-gray-700 truncate">
+                                    Total Blocking Time
+                                  </span>
+                                </div>
+                                <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
+                                  {Math.round(
+                                    results.webMetrics.metrics
+                                      .totalBlockingTime,
+                                  )}
+                                  ms
+                                </span>
+                              </div>
+                              <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
+                                <p className="text-xs text-gray-600">
+                                  {results.webMetrics.metrics
+                                    .totalBlockingTime < 200
+                                    ? 'Excellent - page responds quickly'
+                                    : results.webMetrics.metrics
+                                          .totalBlockingTime < 600
+                                      ? 'Moderate - reduce JavaScript execution'
+                                      : 'Poor - significant blocking detected'}
+                                </p>
+                              </div>
                             </div>
-                            <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
-                              {Math.round(results.webMetrics.metrics.totalBlockingTime)}ms
-                            </span>
-                          </div>
-                          <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
-                            <p className="text-xs text-gray-600">
-                              {results.webMetrics.metrics.totalBlockingTime < 200
-                                ? "Excellent - page responds quickly"
-                                : results.webMetrics.metrics.totalBlockingTime < 600
-                                ? "Moderate - reduce JavaScript execution"
-                                : "Poor - significant blocking detected"}
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                          )}
 
-                      {results && typeof results === 'object' && 'webMetrics' in results && typeof results.webMetrics === 'object' && results.webMetrics && 'metrics' in results.webMetrics && typeof results.webMetrics.metrics === 'object' && results.webMetrics.metrics && 'cumulativeLayoutShift' in results.webMetrics.metrics && typeof results.webMetrics.metrics.cumulativeLayoutShift === 'number' && (
-                        <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className={cn(
-                                "size-2 rounded-full shrink-0",
-                                results.webMetrics.metrics.cumulativeLayoutShift < 0.1
-                                  ? "bg-emerald-500"
-                                  : results.webMetrics.metrics.cumulativeLayoutShift < 0.25
-                                  ? "bg-amber-500"
-                                  : "bg-red-500"
-                              )}></span>
-                              <span className="text-sm font-medium text-gray-700 truncate">Cumulative Layout Shift</span>
+                        {results &&
+                          typeof results === 'object' &&
+                          'webMetrics' in results &&
+                          typeof results.webMetrics === 'object' &&
+                          results.webMetrics &&
+                          'metrics' in results.webMetrics &&
+                          typeof results.webMetrics.metrics === 'object' &&
+                          results.webMetrics.metrics &&
+                          'cumulativeLayoutShift' in
+                            results.webMetrics.metrics &&
+                          typeof results.webMetrics.metrics
+                            .cumulativeLayoutShift === 'number' && (
+                            <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-200 hover:shadow-sm transition-all bg-white">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span
+                                    className={cn(
+                                      'size-2 rounded-full shrink-0',
+                                      results.webMetrics.metrics
+                                        .cumulativeLayoutShift < 0.1
+                                        ? 'bg-emerald-500'
+                                        : results.webMetrics.metrics
+                                              .cumulativeLayoutShift < 0.25
+                                          ? 'bg-amber-500'
+                                          : 'bg-red-500',
+                                    )}
+                                  ></span>
+                                  <span className="text-sm font-medium text-gray-700 truncate">
+                                    Cumulative Layout Shift
+                                  </span>
+                                </div>
+                                <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
+                                  {results.webMetrics.metrics.cumulativeLayoutShift.toFixed(
+                                    3,
+                                  )}
+                                </span>
+                              </div>
+                              <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
+                                <p className="text-xs text-gray-600">
+                                  {results.webMetrics.metrics
+                                    .cumulativeLayoutShift < 0.1
+                                    ? 'Excellent - stable visual layout'
+                                    : results.webMetrics.metrics
+                                          .cumulativeLayoutShift < 0.25
+                                      ? 'Moderate - some layout shifts detected'
+                                      : 'Poor - significant layout instability'}
+                                </p>
+                              </div>
                             </div>
-                            <span className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
-                              {(results.webMetrics.metrics.cumulativeLayoutShift).toFixed(3)}
-                            </span>
-                          </div>
-                          <div className="ml-4 p-2 sm:p-3 bg-gray-50 rounded-lg border-l-2 border-blue-500">
-                            <p className="text-xs text-gray-600">
-                              {results.webMetrics.metrics.cumulativeLayoutShift < 0.1
-                                ? "Excellent - stable visual layout"
-                                : results.webMetrics.metrics.cumulativeLayoutShift < 0.25
-                                ? "Moderate - some layout shifts detected"
-                                : "Poor - significant layout instability"}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Console Errors - SEOitis Style */}
-                    {results && typeof results === 'object' && 'consoleErrors' in results && Array.isArray(results.consoleErrors) && results.consoleErrors.length > 0 && (
-                      <div className="mt-4 border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-red-200 hover:shadow-sm transition-all bg-white">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="size-2 rounded-full shrink-0 bg-red-500"></span>
-                            <span className="text-sm font-medium text-gray-700 truncate">Console Errors</span>
-                          </div>
-                          <span className="text-lg sm:text-xl font-bold text-red-600 shrink-0">
-                            {results.consoleErrors.length}
-                          </span>
-                        </div>
-                        <div className="ml-4 p-2 sm:p-3 bg-red-50 rounded-lg border-l-2 border-red-500">
-                          <p className="text-xs text-gray-700 font-medium">
-                            Critical - {results.consoleErrors.length} console {results.consoleErrors.length === 1 ? 'error' : 'errors'} detected during page load
-                          </p>
-                        </div>
+                          )}
                       </div>
-                    )}
+
+                      {/* Console Errors - SEOitis Style */}
+                      {results &&
+                        typeof results === 'object' &&
+                        'consoleErrors' in results &&
+                        Array.isArray(results.consoleErrors) &&
+                        results.consoleErrors.length > 0 && (
+                          <div className="mt-4 border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-red-200 hover:shadow-sm transition-all bg-white">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="size-2 rounded-full shrink-0 bg-red-500"></span>
+                                <span className="text-sm font-medium text-gray-700 truncate">
+                                  Console Errors
+                                </span>
+                              </div>
+                              <span className="text-lg sm:text-xl font-bold text-red-600 shrink-0">
+                                {results.consoleErrors.length}
+                              </span>
+                            </div>
+                            <div className="ml-4 p-2 sm:p-3 bg-red-50 rounded-lg border-l-2 border-red-500">
+                              <p className="text-xs text-gray-700 font-medium">
+                                Critical - {results.consoleErrors.length}{' '}
+                                console{' '}
+                                {results.consoleErrors.length === 1
+                                  ? 'error'
+                                  : 'errors'}{' '}
+                                detected during page load
+                              </p>
+                            </div>
+                          </div>
+                        )}
 
                       {/* Preview Notice & Action Buttons - Blue Theme */}
                       <div className="mt-6 space-y-4">
@@ -728,13 +928,8 @@ const Index = () => {
 
                         {/* Action Buttons */}
                         <div className="flex flex-col sm:flex-row gap-3">
-                          <Link
-                            to="/dashboard"
-                            className="sm:w-auto"
-                          >
-                            <Button
-                              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all px-6 py-3 h-auto"
-                            >
+                          <Link to="/dashboard" className="sm:w-auto">
+                            <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all px-6 py-3 h-auto">
                               View Report
                             </Button>
                           </Link>
@@ -761,29 +956,46 @@ const Index = () => {
       </Dialog>
 
       <section
-        className={cn('container m-auto pt-[32px] px-4 md:px-8 lg:px-[75px]')}
+        className={cn('container m-auto pt-[32px] px-4 md:px-8 lg:px-[75px] relative')}
       >
+        {/* Animated gradient background */}
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-400/10 rounded-full blur-3xl animate-float-delayed"></div>
+        </div>
         <div className={cn('flex justify-center flex-col items-center')}>
           <h1
             className={cn(
               'text-2xl md:text-3xl lg:text-[48px] font-bold w-full md:w-4/5 text-center mb-6 md:mb-10 leading-tight',
+              'animate-in fade-in slide-in-from-top-4 duration-700',
             )}
           >
-            <span className="block">
+            <span className="block mb-2">
               Automated Website{' '}
-              <span className={cn('text-blue-600')}>Testing.</span> Faster.
+              <span className={cn('text-blue-600')}>Testing.</span>
             </span>
-            <span className="block">Smarter. Better.</span>
+            <span className="block">
+              <span className="inline-block min-w-[200px] md:min-w-[280px] text-blue-600">
+                {currentText}
+                <span className="animate-pulse">|</span>
+              </span>
+            </span>
           </h1>
 
           <div className="text-center w-full max-w-4xl">
-            <h2 className={cn('capitalize mb-2 font-bold text-lg md:text-xl')}>
+            <h2
+              className={cn(
+                'capitalize mb-2 font-bold text-lg md:text-xl',
+                'animate-in fade-in slide-in-from-top-4 duration-700 delay-150',
+              )}
+            >
               Run a Free Website Test Instantly
             </h2>
 
             <p
               className={cn(
                 'mb-6 text-sm md:text-base max-w-2xl mx-auto text-gray-600',
+                'animate-in fade-in slide-in-from-top-4 duration-700 delay-300',
               )}
             >
               Enter any website URL to check performance, detect errors, and
@@ -791,7 +1003,10 @@ const Index = () => {
             </p>
 
             <form
-              className="flex flex-col md:flex-row gap-3 justify-center items-start mb-8 max-w-6xl mx-auto"
+              className={cn(
+                'flex flex-col md:flex-row gap-3 justify-center items-start mb-8 max-w-6xl mx-auto',
+                'animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500',
+              )}
               onSubmit={form.handleSubmit(onSubmit)}
             >
               {/* Main URL Input Section */}
@@ -938,17 +1153,30 @@ const Index = () => {
                     '!h-12 !min-h-[48px] !max-h-[48px] px-8 text-sm font-semibold rounded-lg w-full md:w-auto',
                     'bg-blue-600 hover:bg-blue-700 text-white',
                     'transition-all duration-200 inline-flex items-center justify-center',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    'hover:scale-105 hover:shadow-lg active:scale-95',
+                    'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
                   )}
                   type="submit"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Testing...' : 'Start Test'}
+                  {isLoading ? (
+                    <>
+                      <span className="inline-block mr-2 animate-spin">⚙️</span>
+                      Testing...
+                    </>
+                  ) : (
+                    'Start Test'
+                  )}
                 </Button>
               </div>
             </form>
 
-            <div className={cn('relative max-w-5xl mx-auto mt-8 md:mt-12')}>
+            <div
+              className={cn(
+                'relative max-w-5xl mx-auto mt-8 md:mt-12',
+                'animate-in fade-in zoom-in-95 duration-1000 delay-700',
+              )}
+            >
               <div className={cn('w-full')}>
                 <img
                   src={DashboardImage}
@@ -958,14 +1186,14 @@ const Index = () => {
               </div>
               <div
                 className={cn(
-                  'absolute top-4 md:top-8 -left-2 md:-left-5 w-[200px] md:w-[311px] h-[180px] md:h-[282px] hidden sm:block',
+                  'absolute top-4 md:top-8 -left-2 md:-left-5 w-[200px] md:w-[311px] h-[180px] md:h-[282px] hidden sm:block animate-float',
                 )}
               >
                 <img
                   src={DownloadCard}
                   alt="Download feature card"
                   className={cn(
-                    'w-full h-full object-cover rounded-md shadow-lg',
+                    'w-full h-full object-cover rounded-md shadow-lg hover:shadow-2xl transition-shadow',
                   )}
                 />
               </div>
@@ -989,10 +1217,10 @@ const Index = () => {
 
         <div className="absolute inset-0 flex items-center">
           <div className={cn('container m-auto px-4 md:px-8 lg:px-[75px]')}>
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 animate-in fade-in slide-in-from-left-8 duration-700">
               What is BugSpy?
             </h2>
-            <p className="font-normal w-full max-w-[650px] mt-4 md:mt-7 text-sm md:text-base leading-relaxed">
+            <p className="font-normal w-full max-w-[650px] mt-4 md:mt-7 text-sm md:text-base leading-relaxed animate-in fade-in slide-in-from-left-8 duration-700 delay-200">
               BugSpy is a web-based platform that automates website testing to
               help developers, QA teams, and businesses deliver flawless digital
               experiences. With advanced browser automation, BugSpy detects UI
@@ -1002,9 +1230,9 @@ const Index = () => {
             </p>
 
             <div className="flex flex-col lg:flex-row justify-between gap-4 md:gap-6 lg:gap-5 mt-6 md:mt-8 lg:mt-12">
-              <PlatformCard>
+              <PlatformCard className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 hover:scale-105 hover:-translate-y-2 transition-transform">
                 <div className="flex justify-center mb-3 md:mb-5">
-                  <div className="bg-white/10 p-2 md:p-3 rounded-sm">
+                  <div className="bg-white/10 p-2 md:p-3 rounded-sm transition-all group-hover:bg-white/20 group-hover:scale-110">
                     <Settings size={20} className="md:w-6 md:h-6" />
                   </div>
                 </div>
@@ -1015,9 +1243,9 @@ const Index = () => {
                   Run instant or scheduled tests without setup.
                 </p>
               </PlatformCard>
-              <PlatformCard>
+              <PlatformCard className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 hover:scale-105 hover:-translate-y-2 transition-transform">
                 <div className="flex justify-center mb-3 md:mb-5">
-                  <div className="bg-white/10 p-2 md:p-3 rounded-sm">
+                  <div className="bg-white/10 p-2 md:p-3 rounded-sm transition-all group-hover:bg-white/20 group-hover:scale-110">
                     <ChartLineIcon size={20} className="md:w-6 md:h-6" />
                   </div>
                 </div>
@@ -1029,9 +1257,9 @@ const Index = () => {
                   Categorized error reports, performance scores, and exports.
                 </p>
               </PlatformCard>
-              <PlatformCard>
+              <PlatformCard className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-700 hover:scale-105 hover:-translate-y-2 transition-transform">
                 <div className="flex justify-center mb-3 md:mb-5">
-                  <div className="bg-white/10 p-2 md:p-3 rounded-sm">
+                  <div className="bg-white/10 p-2 md:p-3 rounded-sm transition-all group-hover:bg-white/20 group-hover:scale-110">
                     <NetworkIcon size={20} className="md:w-6 md:h-6" />
                   </div>
                 </div>
@@ -1054,18 +1282,18 @@ const Index = () => {
           )}
         >
           <div className="flex justify-center flex-col text-center mb-12 md:mb-20">
-            <h2 className="text-2xl md:text-3xl lg:text-4xl capitalize font-bold mb-3">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl capitalize font-bold mb-3 animate-in fade-in zoom-in-95 duration-700">
               features overview
             </h2>
-            <p className="text-sm md:text-base max-w-2xl mx-auto">
+            <p className="text-sm md:text-base max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
               Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
               vulputate libero
             </p>
           </div>
 
           {/* Feature 1: Error Categorization */}
-          <div className="flex flex-col lg:flex-row mt-6 md:mt-10 mb-6 md:mb-10 items-center py-8 md:py-12 lg:py-20 gap-6 lg:gap-12">
-            <div className="w-full lg:w-1/2 order-2 lg:order-1">
+          <div className="flex flex-col lg:flex-row mt-6 md:mt-10 mb-6 md:mb-10 items-center py-8 md:py-12 lg:py-20 gap-6 lg:gap-12 group">
+            <div className="w-full lg:w-1/2 order-2 lg:order-1 animate-in fade-in slide-in-from-left-8 duration-700">
               <h3 className="text-xl md:text-2xl font-bold mb-3 text-center lg:text-left">
                 Error Categorization
               </h3>
@@ -1078,7 +1306,7 @@ const Index = () => {
                 vulputate libero et velit interdum, ac aliquet odio mattis.
               </p>
             </div>
-            <div className="w-full lg:w-1/2 max-w-[500px] lg:max-w-[650px] h-[250px] md:h-[350px] border overflow-hidden rounded-sm shadow-xl order-1 lg:order-2">
+            <div className="w-full lg:w-1/2 max-w-[500px] lg:max-w-[650px] h-[250px] md:h-[350px] border overflow-hidden rounded-sm shadow-xl order-1 lg:order-2 animate-in fade-in slide-in-from-right-8 duration-700 delay-200 hover:scale-105 hover:shadow-2xl transition-all">
               <img
                 src={ErrorCat}
                 alt="Error categorization feature"
@@ -1088,15 +1316,15 @@ const Index = () => {
           </div>
 
           {/* Feature 2: Full-page Screenshots */}
-          <div className="flex flex-col lg:flex-row mt-6 md:mt-10 mb-6 md:mb-10 items-center py-8 md:py-12 lg:py-20 gap-6 lg:gap-12">
-            <div className="w-full lg:w-1/2 max-w-[500px] lg:max-w-[650px] h-[250px] md:h-[350px] border overflow-hidden rounded-sm shadow-xl order-1">
+          <div className="flex flex-col lg:flex-row mt-6 md:mt-10 mb-6 md:mb-10 items-center py-8 md:py-12 lg:py-20 gap-6 lg:gap-12 group">
+            <div className="w-full lg:w-1/2 max-w-[500px] lg:max-w-[650px] h-[250px] md:h-[350px] border overflow-hidden rounded-sm shadow-xl order-1 animate-in fade-in slide-in-from-left-8 duration-700 delay-200 hover:scale-105 hover:shadow-2xl transition-all">
               <img
                 src={ScreenShots}
                 alt="Full-page screenshots feature"
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="w-full lg:w-1/2 order-2">
+            <div className="w-full lg:w-1/2 order-2 animate-in fade-in slide-in-from-right-8 duration-700">
               <h3 className="text-xl md:text-2xl font-bold mb-3 text-center lg:text-left">
                 Full-page Screenshots.
               </h3>
@@ -1112,8 +1340,8 @@ const Index = () => {
           </div>
 
           {/* Feature 3: Exportable Reports */}
-          <div className="flex flex-col lg:flex-row mt-6 md:mt-10 mb-6 md:mb-10 items-center py-8 md:py-12 lg:py-20 gap-6 lg:gap-12">
-            <div className="w-full lg:w-1/2 order-2 lg:order-1">
+          <div className="flex flex-col lg:flex-row mt-6 md:mt-10 mb-6 md:mb-10 items-center py-8 md:py-12 lg:py-20 gap-6 lg:gap-12 group">
+            <div className="w-full lg:w-1/2 order-2 lg:order-1 animate-in fade-in slide-in-from-left-8 duration-700">
               <h3 className="text-xl md:text-2xl font-bold mb-3 text-center lg:text-left">
                 Exportable Reports.
               </h3>
@@ -1126,7 +1354,7 @@ const Index = () => {
                 vulputate libero et velit interdum, ac aliquet odio mattis.
               </p>
             </div>
-            <div className="w-full lg:w-1/2 max-w-[500px] lg:max-w-[650px] h-[250px] md:h-[350px] border overflow-hidden rounded-sm shadow-xl order-1 lg:order-2">
+            <div className="w-full lg:w-1/2 max-w-[500px] lg:max-w-[650px] h-[250px] md:h-[350px] border overflow-hidden rounded-sm shadow-xl order-1 lg:order-2 animate-in fade-in slide-in-from-right-8 duration-700 delay-200 hover:scale-105 hover:shadow-2xl transition-all">
               <img
                 src={ShareableReports}
                 alt="Exportable reports feature"
@@ -1136,15 +1364,15 @@ const Index = () => {
           </div>
 
           {/* Feature 4: Scheduled Tests */}
-          <div className="flex flex-col lg:flex-row mt-6 md:mt-10 mb-6 md:mb-10 items-center py-8 md:py-12 lg:py-20 gap-6 lg:gap-12">
-            <div className="w-full lg:w-1/2 max-w-[500px] lg:max-w-[650px] h-[250px] md:h-[350px] border overflow-hidden rounded-sm shadow-xl order-1">
+          <div className="flex flex-col lg:flex-row mt-6 md:mt-10 mb-6 md:mb-10 items-center py-8 md:py-12 lg:py-20 gap-6 lg:gap-12 group">
+            <div className="w-full lg:w-1/2 max-w-[500px] lg:max-w-[650px] h-[250px] md:h-[350px] border overflow-hidden rounded-sm shadow-xl order-1 animate-in fade-in slide-in-from-left-8 duration-700 delay-200 hover:scale-105 hover:shadow-2xl transition-all">
               <img
                 src={ScheduleTest}
                 alt="Scheduled tests feature"
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="w-full lg:w-1/2 order-2">
+            <div className="w-full lg:w-1/2 order-2 animate-in fade-in slide-in-from-right-8 duration-700">
               <h3 className="text-xl md:text-2xl font-bold mb-3 text-center lg:text-left">
                 Scheduled tests & history (Pro+)
               </h3>
@@ -1167,10 +1395,10 @@ const Index = () => {
           )}
         >
           <div className="text-center mb-8 md:mb-12 lg:mb-16">
-            <h3 className="capitalize font-bold text-2xl md:text-3xl lg:text-4xl">
+            <h3 className="capitalize font-bold text-2xl md:text-3xl lg:text-4xl animate-in fade-in zoom-in-95 duration-700">
               how bugspy works
             </h3>
-            <p className="mt-3 text-sm md:text-base max-w-2xl mx-auto">
+            <p className="mt-3 text-sm md:text-base max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
               Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
               vulputate libero
             </p>
@@ -1183,6 +1411,7 @@ const Index = () => {
               title="Enter a website URL"
               subTitle="(UI, console, network, performance)."
               altText="Step 1: Enter website URL"
+              className="animate-in fade-in slide-in-from-left-8 duration-700 delay-300 hover:-translate-y-2 hover:shadow-xl transition-all"
             />
 
             <HowItWorksCard
@@ -1191,6 +1420,7 @@ const Index = () => {
               title="Run automated tests"
               subTitle="BugSpy performs comprehensive analysis."
               altText="Step 2: Run automated tests"
+              className="animate-in fade-in slide-in-from-right-8 duration-700 delay-500 hover:-translate-y-2 hover:shadow-xl transition-all"
             />
             <HowItWorksCard
               image={ScheduleTest}
@@ -1198,6 +1428,7 @@ const Index = () => {
               title="Review detailed results"
               subTitle="Get categorized errors and insights."
               altText="Step 3: Review detailed results"
+              className="animate-in fade-in slide-in-from-left-8 duration-700 delay-700 hover:-translate-y-2 hover:shadow-xl transition-all"
             />
             <HowItWorksCard
               image={ScheduleTest}
@@ -1205,6 +1436,7 @@ const Index = () => {
               title="Export and share reports"
               subTitle="Download or share your findings."
               altText="Step 4: Export and share reports"
+              className="animate-in fade-in slide-in-from-right-8 duration-700 delay-[900ms] hover:-translate-y-2 hover:shadow-xl transition-all"
             />
           </div>
         </section>
@@ -1215,28 +1447,28 @@ const Index = () => {
           'container m-auto py-8 md:py-12 lg:py-[50px] px-4 md:px-8 lg:px-[75px] mt-10',
         )}
       >
-        <div className="bg-blue-600 overflow-hidden rounded-xl flex flex-col lg:flex-row p-6 md:p-8 lg:ps-10 lg:pr-0 min-h-[400px] lg:h-90 text-white items-center lg:items-start relative">
-          <div className="w-full lg:w-1/2 z-10 text-center lg:text-left mb-6 lg:mb-0">
+        <div className="bg-blue-600 overflow-hidden rounded-xl flex flex-col lg:flex-row p-6 md:p-8 lg:ps-10 lg:pr-0 min-h-[400px] lg:h-90 text-white items-center lg:items-start relative group">
+          <div className="w-full lg:w-1/2 z-10 text-center lg:text-left mb-6 lg:mb-0 animate-in fade-in slide-in-from-left-8 duration-700">
             <h2 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold leading-tight">
               <span className="block mb-1 md:mb-2">Sign up to unlock </span>
               <span className="block">full details</span>
             </h2>
-            <p className="my-3 md:my-4 text-sm md:text-base max-w-lg mx-auto lg:mx-0">
+            <p className="my-3 md:my-4 text-sm md:text-base max-w-lg mx-auto lg:mx-0 animate-in fade-in slide-in-from-left-8 duration-700 delay-200">
               Vorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
               vulputate libero et velit interdum.
             </p>
             <Button
               onClick={openSignupModal}
-              className="bg-white text-black/70 px-6 md:px-8 lg:px-10 py-3 md:py-4 lg:py-5 font-semibold hover:bg-gray-100 transition-colors"
+              className="bg-white text-black/70 px-6 md:px-8 lg:px-10 py-3 md:py-4 lg:py-5 font-semibold hover:bg-gray-100 hover:scale-105 transition-all animate-in fade-in zoom-in-95 duration-700 delay-500"
             >
               Sign up
             </Button>
           </div>
-          <div className="absolute bottom-0 top-0 right-0 lg:top-8 w-full lg:w-1/2 opacity-20 lg:opacity-100 isolate">
+          <div className="absolute bottom-0 top-0 right-0 lg:top-8 w-full lg:w-1/2 opacity-20 lg:opacity-100 isolate animate-in fade-in slide-in-from-right-8 duration-1000 delay-300">
             <img
               src={DashboardScreenshot}
               alt="BugSpy Dashboard Preview"
-              className="w-full h-full object-cover object-left"
+              className="w-full h-full object-cover object-left group-hover:scale-105 transition-transform duration-500"
             />
           </div>
         </div>
