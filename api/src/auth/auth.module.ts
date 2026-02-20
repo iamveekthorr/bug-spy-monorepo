@@ -20,9 +20,9 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { GitHubStrategy } from './strategies/github.strategy';
 
 // Conditionally include OAuth strategies only if credentials are configured
-const getOAuthProviders = () => {
+const getOAuthProviders = (): any[] => {
   const configService = new ConfigService();
-  const providers = [
+  const providers: any[] = [
     AuthService,
     JwtAccessSecretProvider,
     JwtRefreshSecretProvider,
