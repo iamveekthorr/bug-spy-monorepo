@@ -1,0 +1,158 @@
+{
+  "project_name": "BugSpy Redesign",
+  "target_aesthetic": "Clean, Modern, Minimal, Trustworthy (Reference: seoitis.com)",
+  "theme_mode": "light",
+  "design_system": {
+    "typography": {
+      "font_family_heading": "Manrope, sans-serif",
+      "font_family_body": "Inter, sans-serif",
+      "scale": {
+        "h1": "text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight",
+        "h2": "text-3xl md:text-4xl font-bold tracking-tight",
+        "h3": "text-2xl font-bold tracking-tight",
+        "body_large": "text-lg leading-relaxed",
+        "body_base": "text-base leading-relaxed",
+        "caption": "text-sm text-muted-foreground"
+      }
+    },
+    "colors": {
+      "primary": {
+        "DEFAULT": "#F97316",
+        "foreground": "#FFFFFF",
+        "hover": "#EA580C",
+        "light": "#FFF7ED"
+      },
+      "secondary": {
+        "DEFAULT": "#FFF7ED",
+        "foreground": "#F97316"
+      },
+      "accent": {
+        "DEFAULT": "#F1F5F9",
+        "foreground": "#0F172A"
+      },
+      "background": {
+        "DEFAULT": "#FFFFFF",
+        "subtle": "#F8FAFC"
+      },
+      "foreground": {
+        "DEFAULT": "#0F172A",
+        "muted": "#64748B"
+      },
+      "border": {
+        "DEFAULT": "#E2E8F0",
+        "subtle": "#F1F5F9"
+      },
+      "success": {
+        "DEFAULT": "#22C55E",
+        "foreground": "#FFFFFF"
+      },
+      "card": {
+        "DEFAULT": "#FFFFFF",
+        "foreground": "#0F172A"
+      }
+    },
+    "radius": {
+      "button": "9999px",
+      "input": "9999px",
+      "card": "1rem",
+      "badge": "9999px"
+    },
+    "shadows": {
+      "card": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+      "card_hover": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+      "button": "0 4px 6px -1px rgba(249, 115, 22, 0.3)"
+    }
+  },
+  "component_guidelines": {
+    "buttons": {
+      "default": "rounded-full font-semibold shadow-sm transition-all active:scale-95",
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-orange-500/20",
+      "outline": "border-2 border-border bg-transparent hover:bg-accent hover:text-accent-foreground text-foreground"
+    },
+    "inputs": {
+      "default": "rounded-full border-border bg-background px-6 py-3 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    },
+    "cards": {
+      "default": "rounded-2xl border border-border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow duration-200"
+    },
+    "badges": {
+      "default": "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+      "success": "border-transparent bg-green-100 text-green-700 hover:bg-green-200",
+      "outline": "text-foreground"
+    }
+  },
+  "layout_strategies": {
+    "general": {
+      "container": "container mx-auto px-4 md:px-6 max-w-7xl",
+      "section_spacing": "py-16 md:py-24"
+    },
+    "landing_page": {
+      "hero": "flex flex-col items-center justify-center text-center min-h-[80vh] bg-white relative overflow-hidden",
+      "hero_title": "max-w-4xl mx-auto mb-6",
+      "hero_input_group": "flex w-full max-w-xl items-center space-x-2 bg-white p-2 rounded-full border shadow-lg ring-offset-2 focus-within:ring-2 ring-primary/20",
+      "feature_grid": "grid grid-cols-1 md:grid-cols-3 gap-8"
+    },
+    "dashboard": {
+      "layout": "min-h-screen bg-background-subtle",
+      "sidebar": "hidden md:flex flex-col w-64 border-r bg-white h-screen fixed left-0 top-0 z-30",
+      "main_content": "md:pl-64 flex-1 flex flex-col min-h-screen",
+      "header": "sticky top-0 z-20 w-full bg-white/80 backdrop-blur-md border-b",
+      "grid": "grid gap-6 md:grid-cols-2 lg:grid-cols-4"
+    }
+  },
+  "assets": {
+    "icons": {
+      "library": "lucide-react",
+      "style": "stroke-width: 2px",
+      "primary_color": "text-primary"
+    },
+    "illustrations": {
+      "hero_bg": "Use subtle geometric patterns (SVG) or soft gradients. Avoid heavy photos.",
+      "features": "Use Lucide icons with colored backgrounds (p-3 rounded-xl bg-orange-100 text-orange-600)"
+    },
+    "images": [
+      {
+        "category": "Hero Background (Abstract)",
+        "url": "https://images.unsplash.com/photo-1768353083287-f632cda77144?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Abstract geometric shapes"
+      },
+      {
+        "category": "Testimonials",
+        "urls": [
+          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=64&h=64",
+          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=64&h=64",
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&h=64"
+        ]
+      }
+    ]
+  },
+  "implementation_instructions": {
+    "step_1_setup": "Install 'Manrope' font. Update tailwind.config.js (or index.css theme) with new color palette and radius.",
+    "step_2_components": "Customize shadcn components (Button, Input, Card) to match 'pill' and 'clean' aesthetic. Remove default 'ring' styles if too aggressive, replace with subtle border colors.",
+    "step_3_pages": "Redesign Landing Page first. Focus on the 'Hero Input' component - it is the core of the app. Make it big and prominent.",
+    "step_4_dashboard": "Apply the new card style to dashboard widgets. Ensure white background for cards on a subtle gray page background (#F8FAFC).",
+    "step_5_details": "Add green checkmarks (Lucide 'Check' icon) to feature lists. Add 'pill' badges for tool categories."
+  },
+  "universal_guidelines": [
+    "You tend to converge toward generic, 'on distribution' outputs. In frontend design, this creates what users call the 'AI slop' aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy",
+    "Use glass-morphism effects with backdrop filters (12-24px blur)",
+    "You MUST NOT apply universal transition. Eg: 'transition: all'. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
+    "You MUST NOT center align the app container, ie do not add '.App { text-align: center; }' in the css file. This disrupts the human natural reading flow of text",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories = main agent will use placeholder text which is FORBIDDEN",
+    "Prioritize using pre-existing components from src/components/ui when applicable",
+    "Create new components that match the style and conventions of existing components when needed",
+    "Examine existing components to understand the project's component patterns before creating new ones",
+    "Components MUST use named exports (export const ComponentName = ...)",
+    "Pages MUST use default exports (export default function PageName() {...})",
+    "Use 'sonner' for toasts",
+    "Sonner component are located in '/app/frontend/src/components/ui/sonner.tsx'"
+  ]
+}
