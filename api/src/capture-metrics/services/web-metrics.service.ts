@@ -10,17 +10,18 @@ export class WebMetricsService {
 
   async *captureWebMetrics(
     page: Page,
-    testType: 'performance' | 'screenshot' | 'cookie',
+    testType: 'performance' | 'screenshot' | 'cookie' | 'seo' | 'accessibility',
   ): AsyncGenerator<any> {
     this.logger.log(`captureWebMetrics called with testType: ${testType}`);
 
-    if (testType !== 'performance') {
+    // Only collect full metrics for performance, seo, and accessibility tests
+    if (testType !== 'performance' && testType !== 'seo' && testType !== 'accessibility') {
       this.logger.log(
-        `Skipping metrics - testType is ${testType}, not performance`,
+        `Skipping detailed metrics - testType is ${testType}`,
       );
       yield {
         status: 'METRICS_SKIPPED',
-        reason: `testType is ${testType}, not performance`,
+        reason: `testType is ${testType}, detailed metrics not needed`,
       };
       return;
     }
