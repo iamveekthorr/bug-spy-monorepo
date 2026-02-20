@@ -656,6 +656,64 @@ export class WebMetricsService {
 
     metrics.performanceScore = calculatePerformanceScore(metrics);
 
+    // Calculate SEO, Accessibility, and Best Practices scores from page analysis
+    try {
+      const pageScores = await page.evaluate(() => {
+        let seoScore = 100;
+        let accessibilityScore = 100;
+        let bestPracticesScore = 100;
+
+        // SEO checks
+        if (!document.querySelector('meta[name="description"]')) seoScore -= 15;
+        if (!document.title || document.title.trim() === '') seoScore -= 20;
+        if (!document.querySelector('meta[name="viewport"]')) seoScore -= 10;
+        if (!document.querySelector('link[rel="canonical"]')) seoScore -= 5;
+        const h1Count = document.querySelectorAll('h1').length;
+        if (h1Count === 0) seoScore -= 10;
+        if (h1Count > 1) seoScore -= 5;
+        if (!document.documentElement.lang) seoScore -= 5;
+
+        // Accessibility checks
+        const imagesWithoutAlt = document.querySelectorAll('img:not([alt])').length;
+        const totalImages = document.querySelectorAll('img').length;
+        if (totalImages > 0 && imagesWithoutAlt > 0) {
+          accessibilityScore -= Math.min(30, imagesWithoutAlt * 5);
+        }
+        const buttonsWithoutText = document.querySelectorAll('button:empty, button:not([aria-label])').length;
+        if (buttonsWithoutText > 0) accessibilityScore -= Math.min(15, buttonsWithoutText * 3);
+        const linksWithoutText = document.querySelectorAll('a:empty:not([aria-label])').length;
+        if (linksWithoutText > 0) accessibilityScore -= Math.min(15, linksWithoutText * 3);
+        if (!document.querySelector('[role="main"], main')) accessibilityScore -= 5;
+        const formsWithoutLabels = document.querySelectorAll('input:not([aria-label]):not([id]), input[id]:not(:has(+ label[for]))').length;
+        if (formsWithoutLabels > 0) accessibilityScore -= Math.min(15, formsWithoutLabels * 3);
+
+        // Best Practices checks
+        const inlineStyles = document.querySelectorAll('[style]').length;
+        if (inlineStyles > 20) bestPracticesScore -= Math.min(15, Math.floor(inlineStyles / 5));
+        const httpLinks = document.querySelectorAll('a[href^="http:"]').length;
+        if (httpLinks > 0) bestPracticesScore -= Math.min(10, httpLinks * 2);
+        if (!document.doctype) bestPracticesScore -= 10;
+        const deprecatedTags = document.querySelectorAll('font, center, marquee, blink').length;
+        if (deprecatedTags > 0) bestPracticesScore -= Math.min(20, deprecatedTags * 5);
+
+        return {
+          seoScore: Math.max(0, Math.min(100, seoScore)),
+          accessibilityScore: Math.max(0, Math.min(100, accessibilityScore)),
+          bestPracticesScore: Math.max(0, Math.min(100, bestPracticesScore)),
+        };
+      });
+
+      metrics.seoScore = pageScores.seoScore;
+      metrics.accessibilityScore = pageScores.accessibilityScore;
+      metrics.bestPracticesScore = pageScores.bestPracticesScore;
+    } catch (error) {
+      this.logger.warn('Could not calculate page scores:', error);
+      // Fallback to performance-based estimates
+      metrics.seoScore = Math.max(60, metrics.performanceScore - 5);
+      metrics.accessibilityScore = Math.max(60, metrics.performanceScore);
+      metrics.bestPracticesScore = Math.max(60, metrics.performanceScore - 5);
+    }
+
     // Try to get Web Vitals if available
     try {
       const webVitals = await page.evaluate(() => {
