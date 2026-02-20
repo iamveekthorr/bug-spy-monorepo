@@ -567,5 +567,87 @@ export class SingleCaptureService {
       this.logger.log('Collecting CONSOLE_ERRORS_COMPLETE data', data.data);
       results.consoleErrors = data.data;
     }
+
+    // Collect Lighthouse results
+    if (data.status === 'LIGHTHOUSE_COMPLETE' && data.data) {
+      this.logger.log('Collecting LIGHTHOUSE_COMPLETE data', data.data);
+      if (!results.webMetrics) results.webMetrics = {};
+      results.webMetrics.lighthouseScores = {
+        performanceScore: data.data.performanceScore,
+        accessibilityScore: data.data.accessibilityScore,
+        bestPracticesScore: data.data.bestPracticesScore,
+        seoScore: data.data.seoScore,
+        source: data.data.source,
+      };
+      // Also update the main performance scores
+      results.webMetrics.performanceScore = data.data.performanceScore;
+      results.webMetrics.accessibilityScore = data.data.accessibilityScore;
+      results.webMetrics.bestPracticesScore = data.data.bestPracticesScore;
+      results.webMetrics.seoScore = data.data.seoScore;
+      if (data.data.audits) {
+        results.webMetrics.lighthouseAudits = data.data.audits;
+      }
+    }
+
+    // Collect SEO analysis results
+    if (data.status === 'SEO_COMPLETE' && data.data) {
+      this.logger.log('Collecting SEO_COMPLETE data', data.data);
+      if (!results.webMetrics) results.webMetrics = {};
+      results.webMetrics.seoAnalysis = data.data;
+      results.webMetrics.seoScore = data.data.score;
+    }
+  }
+
+  /**
+   * Run Lighthouse audit and stream results
+   */
+  private async runLighthouseAudit(
+    url: string,
+    page: Page,
+    subscriber: any,
+    results: TestResults,
+  ): Promise<void> {
+    try {
+      subscriber.next({ data: { status: 'LIGHTHOUSE_START' } });
+      
+      const lighthouseResult = await this.lighthouseService.runAudit(url, page);
+      
+      subscriber.next({ 
+        data: { 
+          status: 'LIGHTHOUSE_COMPLETE', 
+          data: lighthouseResult 
+        } 
+      });
+      
+      this.collectServiceResult({ status: 'LIGHTHOUSE_COMPLETE', data: lighthouseResult }, results);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Lighthouse audit error:', errorMessage);
+      subscriber.next({ data: { status: 'LIGHTHOUSE_ERROR', error: errorMessage } });
+    }
+  }
+
+  /**
+   * Run SEO analysis and stream results
+   */
+  private async runSeoAnalysis(
+    page: Page,
+    url: string,
+    subscriber: any,
+    results: TestResults,
+  ): Promise<void> {
+    try {
+      for await (const event of this.seoMetricsService.captureSeoMetrics(page, url)) {
+        subscriber.next({ data: event });
+        
+        if (event.status === 'SEO_COMPLETE') {
+          this.collectServiceResult(event, results);
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('SEO analysis error:', errorMessage);
+      subscriber.next({ data: { status: 'SEO_ERROR', error: errorMessage } });
+    }
   }
 }
