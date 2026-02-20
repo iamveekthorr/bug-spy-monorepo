@@ -10,6 +10,8 @@ import {
 
 import { BrowserPoolService } from './browser-pool.service';
 import { WebMetricsService } from './web-metrics.service';
+import { LighthouseService } from './lighthouse.service';
+import { SeoMetricsService } from './seo-metrics.service';
 import { ScreenshotsService } from './screenshots.service';
 import { CookiesService } from './cookies.service';
 import { DeviceConfigService } from './device-config.service';
@@ -24,6 +26,8 @@ import { CreateCaptureData } from '~/dto/create-capture-data';
  * Handles single URL capture operations with:
  * - Page acquisition and configuration
  * - Service coordination (metrics, screenshots, cookies, console errors)
+ * - Lighthouse integration for accurate performance scoring
+ * - SEO-specific analysis for SEO test types
  * - Observable/SSE streaming for real-time progress
  * - Resource cleanup and error handling
  * - Temporary cache storage
@@ -37,6 +41,8 @@ export class SingleCaptureService {
   constructor(
     private readonly browserPool: BrowserPoolService,
     private readonly webMetricsService: WebMetricsService,
+    private readonly lighthouseService: LighthouseService,
+    private readonly seoMetricsService: SeoMetricsService,
     private readonly screenshotsService: ScreenshotsService,
     private readonly cookiesService: CookiesService,
     private readonly deviceConfigService: DeviceConfigService,
