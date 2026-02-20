@@ -31,6 +31,60 @@ export interface WebMetricsResult {
   performanceMetrics?: PerformanceMetrics;
   networkMetrics?: NetworkMetrics;
   vitalsMetrics?: VitalsMetrics;
+  // Lighthouse scores
+  performanceScore?: number;
+  accessibilityScore?: number;
+  bestPracticesScore?: number;
+  seoScore?: number;
+  lighthouseScores?: LighthouseScores;
+  lighthouseAudits?: AuditDetail[];
+  // SEO Analysis
+  seoAnalysis?: SeoAnalysisResult;
+}
+
+export interface LighthouseScores {
+  performanceScore: number;
+  accessibilityScore: number;
+  bestPracticesScore: number;
+  seoScore: number;
+  source: 'lighthouse' | 'fallback' | 'error';
+}
+
+export interface AuditDetail {
+  id: string;
+  title: string;
+  description?: string;
+  score: number | null;
+  displayValue?: string;
+  numericValue?: number;
+  scoreDisplayMode?: string;
+}
+
+export interface SeoAnalysisResult {
+  score: number;
+  metaTags: any;
+  headings: any;
+  content: any;
+  technical: any;
+  structuredData: any;
+  links: any;
+  mobile: any;
+  recommendations: SeoRecommendation[];
+  issues: SeoIssue[];
+}
+
+export interface SeoRecommendation {
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  category: string;
+  title: string;
+  description: string;
+  impact: 'high' | 'medium' | 'low';
+}
+
+export interface SeoIssue {
+  source: string;
+  severity: 'critical' | 'warning' | 'info';
+  message: string;
 }
 
 export interface PerformanceMetrics {
