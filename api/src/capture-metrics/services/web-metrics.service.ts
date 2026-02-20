@@ -619,13 +619,42 @@ export class WebMetricsService {
         responseStart: navigation.responseStart - navigation.startTime,
         responseEnd: navigation.responseEnd - navigation.startTime,
 
-        // Performance Scores (placeholder - would need Lighthouse integration for real scores)
-        performanceScore: 85, // Estimated based on metrics
-        accessibilityScore: 90, // Placeholder
-        bestPracticesScore: 85, // Placeholder
-        seoScore: 90, // Placeholder
+        // Performance Scores (calculated based on actual metrics)
+        performanceScore: 0, // Will be calculated below
+        accessibilityScore: 0, // Will be calculated below
+        bestPracticesScore: 0, // Will be calculated below
+        seoScore: 0, // Will be calculated below
       };
     });
+
+    // Calculate actual performance scores based on Core Web Vitals
+    const calculatePerformanceScore = (m: any) => {
+      let score = 100;
+      
+      // FCP scoring (Good: <1.8s, Needs Improvement: 1.8-3s, Poor: >3s)
+      if (m.firstContentfulPaint > 3000) score -= 20;
+      else if (m.firstContentfulPaint > 1800) score -= 10;
+      
+      // LCP scoring (Good: <2.5s, Needs Improvement: 2.5-4s, Poor: >4s)
+      if (m.largestContentfulPaint > 4000) score -= 25;
+      else if (m.largestContentfulPaint > 2500) score -= 12;
+      
+      // TBT scoring (Good: <200ms, Needs Improvement: 200-600ms, Poor: >600ms)
+      if (m.totalBlockingTime > 600) score -= 20;
+      else if (m.totalBlockingTime > 200) score -= 10;
+      
+      // CLS scoring (Good: <0.1, Needs Improvement: 0.1-0.25, Poor: >0.25)
+      if (m.cumulativeLayoutShift > 0.25) score -= 15;
+      else if (m.cumulativeLayoutShift > 0.1) score -= 8;
+      
+      // TTFB scoring
+      if (m.timeToFirstByte > 800) score -= 10;
+      else if (m.timeToFirstByte > 200) score -= 5;
+      
+      return Math.max(0, Math.min(100, Math.round(score)));
+    };
+
+    metrics.performanceScore = calculatePerformanceScore(metrics);
 
     // Try to get Web Vitals if available
     try {
