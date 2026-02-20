@@ -43,10 +43,10 @@ export class GetTestsQueryDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['performance', 'screenshot', 'cookie', 'all'], {
-    message: 'testType must be one of: performance, screenshot, cookie, all',
+  @IsIn(['performance', 'screenshot', 'cookie', 'seo', 'accessibility', 'all'], {
+    message: 'testType must be one of: performance, screenshot, cookie, seo, accessibility, all',
   })
-  readonly testType?: 'performance' | 'screenshot' | 'cookie' | 'all' = 'all';
+  readonly testType?: 'performance' | 'screenshot' | 'cookie' | 'seo' | 'accessibility' | 'all' = 'all';
 
   @IsOptional()
   @IsString()
