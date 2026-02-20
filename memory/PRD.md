@@ -4,11 +4,13 @@
 A web application that enables users to run web metrics tests and view corresponding test reports. Features a React/Vite frontend with a NestJS backend, using MongoDB for data persistence.
 
 ## Tech Stack
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Query
-- **Backend**: NestJS, TypeScript
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Query, Recharts
+- **Backend**: NestJS, TypeScript, Lighthouse
 - **Database**: MongoDB
 - **Authentication**: JWT (JSON Web Token)
 - **Offline Storage**: IndexedDB (via `idb` library)
+- **Performance Testing**: Google Lighthouse, Custom Core Web Vitals analysis
+- **SEO Analysis**: Custom SEO metrics service with comprehensive checks
 
 ## Design System (Updated Feb 17, 2026)
 Based on seoitis.com clean card-based design with original blue brand colors:
