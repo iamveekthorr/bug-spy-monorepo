@@ -26,6 +26,41 @@ Based on seoitis.com clean card-based design with original blue brand colors:
 
 ## Completed Work
 
+### Feb 20, 2026 - Lighthouse & SEO Integration
+
+#### Lighthouse Integration (IMPLEMENTED)
+- Added Google Lighthouse for accurate performance scoring
+- Scores are now dynamically calculated based on actual page metrics:
+  - Performance Score: FCP, LCP, TBT, CLS, TTFB
+  - Accessibility Score: Alt text, labels, landmarks, ARIA
+  - Best Practices Score: HTTPS, doctype, deprecated tags
+  - SEO Score: Meta tags, headings, structured data
+- Falls back to manual calculation if Lighthouse unavailable
+- New service: `/app/api/src/capture-metrics/services/lighthouse.service.ts`
+
+#### Dedicated SEO Metrics Service (IMPLEMENTED)
+- Comprehensive SEO analysis for 'seo' test type
+- Meta Tags Analysis: title, description, OG tags, Twitter cards
+- Headings Analysis: H1-H6 structure, hierarchy validation
+- Content Analysis: word count, reading time, images, links
+- Technical SEO: HTTPS, doctype, favicon, TTFB
+- Structured Data: JSON-LD, microdata detection
+- Mobile Friendliness: viewport, tap targets, font sizes
+- Links Analysis: internal/external, broken, nofollow
+- Generates prioritized recommendations
+- New service: `/app/api/src/capture-metrics/services/seo-metrics.service.ts`
+
+#### Test Types Enhanced
+- Added 'seo' and 'accessibility' as test types
+- Performance tests: Use Lighthouse + web metrics
+- SEO tests: Use dedicated SEO service + basic metrics
+- Other tests: Use Lighthouse for scoring
+
+#### Interface Updates
+- Updated `WebMetricsResult` interface with Lighthouse and SEO fields
+- Added `LighthouseScores`, `AuditDetail`, `SeoAnalysisResult` types
+- Updated DTOs to support new test types
+
 ### Feb 17, 2026 - UI Redesign (seoitis.com style + Blue Brand)
 
 #### Design Implementation (VERIFIED - 100% Test Pass Rate)
