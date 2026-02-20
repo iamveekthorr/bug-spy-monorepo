@@ -169,12 +169,12 @@ export class SingleCaptureService {
 
       subscriber.next({ data: { status: 'NAVIGATION_COMPLETE', url } });
 
-      // Now start services with optimized sequencing for performance testing
+      // Now start services based on test type
       const servicePromises: Promise<void>[] = [];
 
-      // For performance tests, prioritize accurate metrics over cookie handling
+      // For performance tests, use Lighthouse for accurate scoring
       if (testType === 'performance') {
-        // Start metrics collection immediately for clean baseline measurements
+        // Start web metrics collection
         servicePromises.push(
           this.runService(
             'METRICS',
@@ -184,8 +184,12 @@ export class SingleCaptureService {
           ),
         );
 
+        // Run Lighthouse audit for accurate scores
+        servicePromises.push(
+          this.runLighthouseAudit(url, page, subscriber, results),
+        );
+
         // Run cookie detection in non-intrusive mode during performance testing
-        // This detects but doesn't click banners to avoid interfering with metrics
         servicePromises.push(
           this.runService(
             'COOKIES',
@@ -194,8 +198,48 @@ export class SingleCaptureService {
             results,
           ),
         );
+      } else if (testType === 'seo') {
+        // For SEO tests, use dedicated SEO metrics service
+        servicePromises.push(
+          this.runSeoAnalysis(page, url, subscriber, results),
+        );
+
+        // Also collect basic web metrics
+        servicePromises.push(
+          this.runService(
+            'METRICS',
+            this.webMetricsService.captureWebMetrics(page, testType),
+            subscriber,
+            results,
+          ),
+        );
+
+        // Cookie handling for SEO tests
+        servicePromises.push(
+          this.runService(
+            'COOKIES',
+            this.cookiesService.handleCookieConsent(page, url),
+            subscriber,
+            results,
+          ),
+        );
       } else {
-        // For non-performance tests, normal cookie handling is fine
+        // For other tests (accessibility, best-practices), standard metrics
+        servicePromises.push(
+          this.runService(
+            'METRICS',
+            this.webMetricsService.captureWebMetrics(page, testType),
+            subscriber,
+            results,
+          ),
+        );
+
+        // Run Lighthouse for accurate scores
+        servicePromises.push(
+          this.runLighthouseAudit(url, page, subscriber, results),
+        );
+
+        // Cookie handling
         servicePromises.push(
           this.runService(
             'COOKIES',
