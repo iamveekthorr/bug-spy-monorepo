@@ -103,10 +103,10 @@ export class CreateScheduleDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['performance', 'screenshot', 'cookie'], {
-    message: 'testType must be one of: performance, screenshot, cookie',
+  @IsIn(['performance', 'screenshot', 'cookie', 'seo', 'accessibility'], {
+    message: 'testType must be one of: performance, screenshot, cookie, seo, accessibility',
   })
-  readonly testType?: 'performance' | 'screenshot' | 'cookie' = 'performance';
+  readonly testType?: 'performance' | 'screenshot' | 'cookie' | 'seo' | 'accessibility' = 'performance';
 
   @IsOptional()
   @IsString()
