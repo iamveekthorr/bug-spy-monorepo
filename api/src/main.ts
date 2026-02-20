@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger, VersioningType } from '@nestjs/common';
-import morgan from 'morgan';
-import compression from 'compression';
+import * as morgan from 'morgan';
+import * as compression from 'compression';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
