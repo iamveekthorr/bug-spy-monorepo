@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { TestResult, ErrorReport } from '@/types';
 import { useTestById } from '@/hooks/useDashboard';
+import SeoResultsSection from './SeoResultsSection';
 
 const TestStatusBadge = ({ status }: { status: string }) => {
   const statusConfig = {
