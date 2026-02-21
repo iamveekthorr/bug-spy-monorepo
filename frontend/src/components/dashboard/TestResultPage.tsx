@@ -494,9 +494,21 @@ const TestResultPage = () => {
               <Share2 size={16} className="mr-2" />
               Share
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                if (rawTest) {
+                  if (test.testType === 'seo' || rawTest.results?.webMetrics?.seoAnalysis) {
+                    exportSeoReportToPdf(rawTest);
+                  } else {
+                    exportPerformanceReportToPdf(rawTest);
+                  }
+                }
+              }}
+            >
               <Download size={16} className="mr-2" />
-              Export
+              Export PDF
             </Button>
           </div>
         </div>
