@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SeoMetricsService, SeoMetricsResult } from '../seo-metrics.service';
-import { PuppeteerHelpersService } from '../puppeteer-helpers.service';
+import { SeoMetricsService, SeoMetricsResult } from '../../services/seo-metrics.service';
+import { PuppeteerHelpersService } from '../../services/puppeteer-helpers.service';
 
 describe('SeoMetricsService', () => {
   let service: SeoMetricsService;
