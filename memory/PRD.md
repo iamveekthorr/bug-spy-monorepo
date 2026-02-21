@@ -171,4 +171,5 @@ Based on seoitis.com clean card-based design with original blue brand colors:
 ## Future Enhancements
 - Add real-time data refresh on Analytics page
 - Performance score trend line chart
-- Export functionality for charts (PNG/PDF)
+- Competitor SEO comparison feature
+- Email alerts for SEO score drops
