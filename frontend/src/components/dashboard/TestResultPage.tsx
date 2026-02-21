@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import type { TestResult, ErrorReport } from '@/types';
 import { useTestById } from '@/hooks/useDashboard';
 import SeoResultsSection from './SeoResultsSection';
+import { exportSeoReportToPdf, exportPerformanceReportToPdf } from '@/utils/pdfExport';
 
 const TestStatusBadge = ({ status }: { status: string }) => {
   const statusConfig = {
