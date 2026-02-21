@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { LighthouseService, LighthouseResult } from '../lighthouse.service';
+import { LighthouseService, LighthouseResult } from '../../services/lighthouse.service';
 
 describe('LighthouseService', () => {
   let service: LighthouseService;
