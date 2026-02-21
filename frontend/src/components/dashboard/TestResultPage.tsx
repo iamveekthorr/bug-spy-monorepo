@@ -700,6 +700,46 @@ const TestResultPage = () => {
             </div>
           )}
 
+          {/* SEO Tab */}
+          {activeTab === 'seo' && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">SEO Analysis</h3>
+              {rawTest?.results?.webMetrics?.seoAnalysis ? (
+                <SeoResultsSection seoAnalysis={rawTest.results.webMetrics.seoAnalysis} />
+              ) : rawTest?.results?.webMetrics?.seoScore ? (
+                <div className="space-y-4">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl flex items-center justify-center">
+                    <div className={cn(
+                      'w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold',
+                      (rawTest.results.webMetrics.seoScore || 0) >= 90 ? 'bg-green-100 text-green-600' :
+                      (rawTest.results.webMetrics.seoScore || 0) >= 70 ? 'bg-yellow-100 text-yellow-600' :
+                      'bg-red-100 text-red-600'
+                    )}>
+                      {rawTest.results.webMetrics.seoScore || 0}
+                    </div>
+                    <div className="ml-6">
+                      <h3 className="text-xl font-bold text-gray-900">SEO Score</h3>
+                      <p className="text-gray-600 mt-1">
+                        {(rawTest.results.webMetrics.seoScore || 0) >= 90 ? 'Excellent SEO!' :
+                         (rawTest.results.webMetrics.seoScore || 0) >= 70 ? 'Good, but can be improved.' :
+                         'Needs SEO optimization.'}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-gray-500 text-center">
+                    Run an SEO-specific test for detailed analysis and recommendations.
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Search size={48} className="mx-auto text-gray-400 mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">No SEO Analysis Available</h4>
+                  <p className="text-gray-500">Run an SEO test to get detailed SEO analysis and recommendations.</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Add other tab contents as needed */}
           {activeTab === 'network' && (
             <div>
