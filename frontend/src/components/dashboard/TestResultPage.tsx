@@ -443,6 +443,7 @@ const TestResultPage = () => {
   const tabs = [
     { id: 'overview', name: 'Overview', icon: FileText },
     { id: 'performance', name: 'Performance', icon: Clock },
+    { id: 'seo', name: 'SEO', icon: Search },
     { id: 'errors', name: 'Issues', icon: AlertTriangle, count: test.results?.errors?.length },
     { id: 'screenshots', name: 'Screenshots', icon: Eye },
     { id: 'network', name: 'Network', icon: Network },
