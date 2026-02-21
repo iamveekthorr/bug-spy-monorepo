@@ -22,6 +22,7 @@ import {
   ChevronRight,
   X,
   ZoomIn,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
