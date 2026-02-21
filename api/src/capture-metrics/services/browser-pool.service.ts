@@ -170,6 +170,7 @@ export class BrowserPoolService implements OnModuleDestroy {
       );
       const newBrowser = await puppeteer.launch({
         headless: true,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
         handleSIGTERM: false,
         handleSIGINT: false,
         handleSIGHUP: false,
@@ -183,6 +184,8 @@ export class BrowserPoolService implements OnModuleDestroy {
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding',
+          '--disable-setuid-sandbox',
+          '--single-process',
         ],
       });
 
