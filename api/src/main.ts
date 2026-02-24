@@ -17,7 +17,7 @@ async function bootstrap() {
       origin:
         process.env.NODE_ENV === Environment.PRODUCTION
           ? process.env.FRONTEND_URL || false
-          : ['http://localhost:3000', 'http://localhost:5173', 'https://web-test-hub.preview.emergentagent.com'], // Dev: Allow local frontend
+          : ['http://localhost:3000', 'http://localhost:5173', 'https://web-audit-hub.preview.emergentagent.com'], // Dev: Allow local frontend
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
