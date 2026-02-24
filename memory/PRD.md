@@ -4,13 +4,20 @@
 A web application that enables users to run web metrics tests and view corresponding test reports. Features a React/Vite frontend with a NestJS backend, using MongoDB for data persistence.
 
 ## Tech Stack
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Query, Recharts
-- **Backend**: NestJS, TypeScript, Lighthouse
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Query, Recharts, jsPDF
+- **Backend**: NestJS, TypeScript, Lighthouse, Puppeteer
 - **Database**: MongoDB
 - **Authentication**: JWT (JSON Web Token)
 - **Offline Storage**: IndexedDB (via `idb` library)
 - **Performance Testing**: Google Lighthouse, Custom Core Web Vitals analysis
 - **SEO Analysis**: Custom SEO metrics service with comprehensive checks
+
+## Latest Update - Feb 24, 2026
+**Verification completed:** All Lighthouse and SEO features are working correctly.
+- Backend unit tests: 13/13 passing
+- API endpoints verified: `/api/v1/capture-metrics/single` (performance & seo types)
+- SEO analysis returns dynamic scores (e.g., 74/100 for example.com)
+- Frontend components integrated: SeoResultsSection, PDF export
 
 ## Design System (Updated Feb 17, 2026)
 Based on seoitis.com clean card-based design with original blue brand colors:
