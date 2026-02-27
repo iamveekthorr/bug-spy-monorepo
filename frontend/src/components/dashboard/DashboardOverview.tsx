@@ -236,10 +236,25 @@ const DashboardOverview = () => {
     <div className="p-6 space-y-6">
       {/* Welcome section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-lg">
-        <h1 className="text-2xl font-bold mb-2">Welcome back!</h1>
-        <p className="text-blue-100">
-          Here's what's happening with your website testing today.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-2">Welcome back!</h1>
+            <p className="text-blue-100">
+              Here's what's happening with your website testing today.
+            </p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="bg-white/20 hover:bg-white/30 text-white border-0"
+            data-testid="dashboard-refresh-btn"
+          >
+            <RefreshCw size={16} className={cn("mr-2", isRefreshing && "animate-spin")} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
       </div>
 
       {/* Stats grid */}
