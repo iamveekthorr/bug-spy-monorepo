@@ -5,12 +5,12 @@
 ### Priority 2: Email Notifications for Score Drops
 **Decisions**: Logged emails (dev), ≥5 point threshold, scheduled tests only
 
-- [ ] Backend: Create notification service (`api/src/notifications/`)
-- [ ] Backend: Add score comparison logic (≥5 point drop)
-- [ ] Backend: Store previous scores in test results
-- [ ] Backend: Create email templates (HTML)
+- [x] Backend: Create notification service (`api/src/notifications/`)
+- [x] Backend: Add score comparison logic (≥5 point drop)
+- [x] Backend: Store previous scores in test results
+- [x] Backend: Create email templates (HTML)
 - [ ] Backend: Hook into scheduled test completion
-- [ ] Frontend: Add notification toggle in Settings
+- [x] Frontend: Add notification toggle in Settings
 - [ ] Test: Run scheduled test, verify log output
 - [ ] Document: Update API docs
 
