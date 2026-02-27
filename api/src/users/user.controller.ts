@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { JwtAuthGuard } from '~/auth/guards/jwt.guard';
 import { CurrentUser } from '~/auth/decorators/current-user.decorator';
 import { UserService } from './user.service';
@@ -18,6 +18,13 @@ interface SyncTestDto {
 
 interface SyncTestsRequestDto {
   tests: SyncTestDto[];
+}
+
+interface UpdateNotificationPreferencesDto {
+  scoreDropAlerts?: boolean;
+  scoreDropThreshold?: number;
+  weeklyReports?: boolean;
+  testCompletionAlerts?: boolean;
 }
 
 @Controller('user')
@@ -51,5 +58,20 @@ export class UserController {
   ) {
     const userId = user._id?.toString() || (user as any).id?.toString();
     return this.userService.syncTestResults(userId, syncData.tests);
+  }
+
+  @Get('notifications/preferences')
+  async getNotificationPreferences(@CurrentUser() user: AuthenticatedUser) {
+    const userId = user._id?.toString() || (user as any).id?.toString();
+    return this.userService.getNotificationPreferences(userId);
+  }
+
+  @Patch('notifications/preferences')
+  async updateNotificationPreferences(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateNotificationPreferencesDto,
+  ) {
+    const userId = user._id?.toString() || (user as any).id?.toString();
+    return this.userService.updateNotificationPreferences(userId, dto);
   }
 }
