@@ -49,6 +49,7 @@ import { AbortInterceptor } from './interceptors/abort.interceptor';
     CaptureMetricsModule,
     AuthModule,
     UsersModule,
+    NotificationModule,
   ],
   providers: [
     {
