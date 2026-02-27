@@ -83,8 +83,18 @@ export class LighthouseService {
       const { lhr } = result;
       const categories = lhr.categories;
 
+      // Get Lighthouse scores, with fallback calculation for performance
+      let performanceScore = Math.round((categories.performance?.score || 0) * 100);
+      
+      // If performance score is 0 or null (often due to Speed Index failing in headless mode),
+      // calculate a score based on the individual metrics that did succeed
+      if (performanceScore === 0) {
+        performanceScore = this.calculatePerformanceScoreFromMetrics(lhr.audits);
+        this.logger.log(`Lighthouse performance score was 0, calculated fallback: ${performanceScore}`);
+      }
+
       const scores: LighthouseResult = {
-        performanceScore: Math.round((categories.performance?.score || 0) * 100),
+        performanceScore,
         accessibilityScore: Math.round((categories.accessibility?.score || 0) * 100),
         bestPracticesScore: Math.round((categories['best-practices']?.score || 0) * 100),
         seoScore: Math.round((categories.seo?.score || 0) * 100),
