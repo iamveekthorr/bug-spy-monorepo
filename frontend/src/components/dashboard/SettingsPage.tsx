@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { api } from '@/lib/api';
+import { api } from '@/lib/api-client';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
