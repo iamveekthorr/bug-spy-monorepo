@@ -121,6 +121,44 @@ export class LighthouseService {
   }
 
   /**
+   * Calculate performance score from individual Lighthouse audit metrics
+   * Used when the overall performance score is 0 (often due to Speed Index failing)
+   */
+  private calculatePerformanceScoreFromMetrics(audits: any): number {
+    let score = 100;
+    
+    // FCP (First Contentful Paint) - Good: < 1.8s, Needs Improvement: < 3s
+    const fcp = audits['first-contentful-paint']?.numericValue || 0;
+    if (fcp > 3000) score -= 25;
+    else if (fcp > 1800) score -= 10;
+    else if (fcp > 0) score -= 0; // Good
+    
+    // LCP (Largest Contentful Paint) - Good: < 2.5s, Needs Improvement: < 4s
+    const lcp = audits['largest-contentful-paint']?.numericValue || 0;
+    if (lcp > 4000) score -= 25;
+    else if (lcp > 2500) score -= 10;
+    else if (lcp > 0) score -= 0; // Good
+    
+    // TBT (Total Blocking Time) - Good: < 200ms, Needs Improvement: < 600ms
+    const tbt = audits['total-blocking-time']?.numericValue || 0;
+    if (tbt > 600) score -= 20;
+    else if (tbt > 200) score -= 10;
+    
+    // CLS (Cumulative Layout Shift) - Good: < 0.1, Needs Improvement: < 0.25
+    const cls = audits['cumulative-layout-shift']?.numericValue || 0;
+    if (cls > 0.25) score -= 15;
+    else if (cls > 0.1) score -= 5;
+    
+    // TTFB (Server Response Time) - Good: < 200ms, Needs Improvement: < 500ms
+    const ttfb = audits['server-response-time']?.numericValue || 0;
+    if (ttfb > 500) score -= 10;
+    else if (ttfb > 200) score -= 5;
+    
+    return Math.max(0, Math.min(100, Math.round(score)));
+  }
+
+
+  /**
    * Extract relevant audit details from Lighthouse results
    */
   private extractAuditDetails(audits: any): AuditDetail[] {
