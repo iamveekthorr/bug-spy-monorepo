@@ -64,6 +64,24 @@ export class User {
   @Prop({ required: false, type: Date, select: false })
   lastResetPasswordRequest: Date;
 
+  // Notification preferences
+  @Prop({
+    required: false,
+    type: Object,
+    default: {
+      scoreDropAlerts: true,
+      scoreDropThreshold: 5,
+      weeklyReports: false,
+      testCompletionAlerts: false,
+    },
+  })
+  notificationPreferences: {
+    scoreDropAlerts: boolean;
+    scoreDropThreshold: number;
+    weeklyReports: boolean;
+    testCompletionAlerts: boolean;
+  };
+
   createdAt: Date;
   updatedAt: Date;
 }
