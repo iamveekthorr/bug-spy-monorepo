@@ -201,9 +201,21 @@ const TestsPage = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Tests</h1>
-        <p className="text-gray-600 mt-1">View and manage your website test results</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Tests</h1>
+          <p className="text-gray-600 mt-1">View and manage your website test results</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isFetching}
+          data-testid="tests-refresh-btn"
+        >
+          <RefreshCw size={16} className={cn("mr-2", isFetching && "animate-spin")} />
+          {isFetching ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       {/* Filters and Search */}
