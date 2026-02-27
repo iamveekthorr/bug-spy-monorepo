@@ -51,7 +51,13 @@ const TestsPage = () => {
     data: userTests = [],
     isLoading,
     error,
+    refetch,
+    isFetching,
   } = useUserTests();
+
+  const handleRefresh = async () => {
+    await refetch();
+  };
 
   const tests = userTests;
 
