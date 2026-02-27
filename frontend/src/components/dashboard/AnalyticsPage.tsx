@@ -184,6 +184,16 @@ const AnalyticsPage = () => {
           <p className="text-gray-600 mt-1">Comprehensive insights into your testing performance</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing || isFetching}
+            data-testid="analytics-refresh-btn"
+          >
+            <RefreshCw size={16} className={cn("mr-2", (isRefreshing || isFetching) && "animate-spin")} />
+            {isRefreshing || isFetching ? 'Refreshing...' : 'Refresh'}
+          </Button>
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-40">
               <Calendar size={16} className="mr-2" />
