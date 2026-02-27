@@ -30,10 +30,10 @@ const profileSchema = z.object({
 });
 
 const notificationSchema = z.object({
-  email: z.boolean(),
-  browser: z.boolean(),
-  testComplete: z.boolean(),
-  criticalIssues: z.boolean(),
+  scoreDropAlerts: z.boolean(),
+  scoreDropThreshold: z.number().min(1).max(50),
+  weeklyReports: z.boolean(),
+  testCompletionAlerts: z.boolean(),
 });
 
 const preferencesSchema = z.object({
