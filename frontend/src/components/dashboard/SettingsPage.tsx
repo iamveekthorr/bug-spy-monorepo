@@ -333,57 +333,75 @@ const SettingsPage = () => {
                 <h2 className="text-lg font-semibold text-gray-900 mb-6">Notification Preferences</h2>
                 <form onSubmit={notificationsForm.handleSubmit(onNotificationsSubmit)} className="space-y-6">
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    {/* Score Drop Alerts */}
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center">
+                          <TrendingDown size={20} className="text-red-500 mr-3" />
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-900">Score Drop Alerts</h3>
+                            <p className="text-sm text-gray-500">Get notified when your test scores drop significantly</p>
+                          </div>
+                        </div>
+                        <input
+                          {...notificationsForm.register('scoreDropAlerts')}
+                          type="checkbox"
+                          className="rounded border-gray-300 text-blue-600 h-5 w-5"
+                          data-testid="score-drop-alerts-toggle"
+                        />
+                      </div>
+                      
+                      {notificationsForm.watch('scoreDropAlerts') && (
+                        <div className="ml-8 mt-3 p-3 bg-white rounded border border-red-100">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Alert threshold (points)
+                          </label>
+                          <div className="flex items-center gap-3">
+                            <Input
+                              {...notificationsForm.register('scoreDropThreshold', { valueAsNumber: true })}
+                              type="number"
+                              min={1}
+                              max={50}
+                              className="w-24"
+                              data-testid="score-drop-threshold-input"
+                            />
+                            <span className="text-sm text-gray-500">
+                              Alert when score drops by {notificationsForm.watch('scoreDropThreshold')} or more points
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg">
                       <div>
-                        <h3 className="text-sm font-medium text-gray-900">Email Notifications</h3>
-                        <p className="text-sm text-gray-500">Receive notifications via email</p>
+                        <h3 className="text-sm font-medium text-gray-900">Weekly Reports</h3>
+                        <p className="text-sm text-gray-500">Receive a weekly summary of your test results</p>
                       </div>
                       <input
-                        {...notificationsForm.register('email')}
+                        {...notificationsForm.register('weeklyReports')}
                         type="checkbox"
-                        className="rounded border-gray-300 text-blue-600"
+                        className="rounded border-gray-300 text-blue-600 h-5 w-5"
+                        data-testid="weekly-reports-toggle"
                       />
                     </div>
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg">
                       <div>
-                        <h3 className="text-sm font-medium text-gray-900">Browser Notifications</h3>
-                        <p className="text-sm text-gray-500">Receive push notifications in your browser</p>
+                        <h3 className="text-sm font-medium text-gray-900">Test Completion Alerts</h3>
+                        <p className="text-sm text-gray-500">Get notified when scheduled tests are completed</p>
                       </div>
                       <input
-                        {...notificationsForm.register('browser')}
+                        {...notificationsForm.register('testCompletionAlerts')}
                         type="checkbox"
-                        className="rounded border-gray-300 text-blue-600"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900">Test Completion</h3>
-                        <p className="text-sm text-gray-500">Get notified when tests are completed</p>
-                      </div>
-                      <input
-                        {...notificationsForm.register('testComplete')}
-                        type="checkbox"
-                        className="rounded border-gray-300 text-blue-600"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900">Critical Issues</h3>
-                        <p className="text-sm text-gray-500">Get alerted for critical issues found</p>
-                      </div>
-                      <input
-                        {...notificationsForm.register('criticalIssues')}
-                        type="checkbox"
-                        className="rounded border-gray-300 text-blue-600"
+                        className="rounded border-gray-300 text-blue-600 h-5 w-5"
+                        data-testid="test-completion-toggle"
                       />
                     </div>
                   </div>
 
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={isLoading}>
+                  <div className="flex justify-end pt-4 border-t">
+                    <Button type="submit" disabled={isLoading} data-testid="save-notifications-btn">
                       {isLoading ? 'Saving...' : 'Save Preferences'}
                     </Button>
                   </div>
