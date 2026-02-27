@@ -12,12 +12,18 @@ A web application that enables users to run web metrics tests and view correspon
 - **Performance Testing**: Google Lighthouse, Custom Core Web Vitals analysis
 - **SEO Analysis**: Custom SEO metrics service with comprehensive checks
 
-## Latest Update - Feb 24, 2026
-**Verification completed:** All Lighthouse and SEO features are working correctly.
+## Latest Update - Feb 27, 2026
+**Fixes completed:**
+1. **Chromium installed** - Was missing, causing Lighthouse to fail silently
+2. **Performance scores now dynamic** - Fixed fallback calculation when Lighthouse's SpeedIndex fails
+3. **Dashboard tests verified working** - Tests tab correctly fetches and displays results from backend
+
+**Verified working:**
 - Backend unit tests: 13/13 passing
-- API endpoints verified: `/api/v1/capture-metrics/single` (performance & seo types)
-- SEO analysis returns dynamic scores (e.g., 74/100 for example.com)
-- Frontend components integrated: SeoResultsSection, PDF export
+- API endpoints: `/api/v1/capture-metrics/single` (performance & seo types)
+- Dynamic Lighthouse scores: example.com (perf: 100, access: 100, bp: 96, seo: 80)
+- Dashboard and Tests pages display backend data correctly
+- SEO analysis returns comprehensive results with recommendations
 
 ## Design System (Updated Feb 17, 2026)
 Based on seoitis.com clean card-based design with original blue brand colors:
