@@ -143,16 +143,20 @@ const SettingsPage = () => {
     }
   };
 
-  const onNotificationsSubmit: SubmitHandler<any> = async () => {
+  const onNotificationsSubmit: SubmitHandler<any> = async (data) => {
     setIsLoading(true);
     setSuccessMessage('');
 
     try {
-      // Mock API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await api.patch('/user/notifications/preferences', {
+        scoreDropAlerts: data.scoreDropAlerts,
+        scoreDropThreshold: data.scoreDropThreshold,
+        weeklyReports: data.weeklyReports,
+        testCompletionAlerts: data.testCompletionAlerts,
+      });
       setSuccessMessage('Notification preferences updated!');
     } catch (error) {
-      console.error('Failed to update notifications');
+      console.error('Failed to update notifications:', error);
     } finally {
       setIsLoading(false);
     }
