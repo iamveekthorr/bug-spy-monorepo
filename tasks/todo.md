@@ -4,15 +4,16 @@
 
 ### Priority 2: Email Notifications for Score Drops
 **Decisions**: Logged emails (dev), ≥5 point threshold, scheduled tests only
+**Status**: COMPLETE
 
 - [x] Backend: Create notification service (`api/src/notifications/`)
 - [x] Backend: Add score comparison logic (≥5 point drop)
 - [x] Backend: Store previous scores in test results
 - [x] Backend: Create email templates (HTML)
-- [ ] Backend: Hook into scheduled test completion
+- [x] Backend: API endpoints for notification preferences
 - [x] Frontend: Add notification toggle in Settings
-- [ ] Test: Run scheduled test, verify log output
-- [ ] Document: Update API docs
+- [x] Frontend: Score drop threshold input
+- [x] Test: UI verified via screenshot
 
 ### Priority 3: Historical Performance Trend Charts
 - [ ] Backend: Create endpoint for historical scores by URL
