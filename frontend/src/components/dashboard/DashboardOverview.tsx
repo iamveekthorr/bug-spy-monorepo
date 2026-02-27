@@ -96,15 +96,24 @@ const DashboardOverview = () => {
     data: stats,
     isLoading: statsLoading,
     error: statsError,
+    refetch: refetchStats,
+    isFetching: isStatsFetching,
   } = useDashboardStats();
   const {
     data: userTests = [],
     isLoading: testsLoading,
     error: testsError,
+    refetch: refetchTests,
+    isFetching: isTestsFetching,
   } = useUserTests();
 
   const isLoading = statsLoading || testsLoading;
   const hasError = statsError || testsError;
+  const isRefreshing = isStatsFetching || isTestsFetching;
+
+  const handleRefresh = async () => {
+    await Promise.all([refetchStats(), refetchTests()]);
+  };
 
   // Use only real tests from API - no mock data
   const recentTests = userTests || [];
