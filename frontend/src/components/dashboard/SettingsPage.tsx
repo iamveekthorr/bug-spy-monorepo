@@ -75,12 +75,33 @@ const SettingsPage = () => {
   const notificationsForm = useForm({
     resolver: zodResolver(notificationSchema),
     defaultValues: {
-      email: true,
-      browser: true,
-      testComplete: true,
-      criticalIssues: true,
+      scoreDropAlerts: true,
+      scoreDropThreshold: 5,
+      weeklyReports: false,
+      testCompletionAlerts: false,
     },
   });
+
+  // Load notification preferences from backend
+  useEffect(() => {
+    const loadNotificationPrefs = async () => {
+      try {
+        const response = await api.get('/user/notifications/preferences');
+        if (response.data?.data) {
+          const prefs = response.data.data;
+          notificationsForm.reset({
+            scoreDropAlerts: prefs.scoreDropAlerts ?? true,
+            scoreDropThreshold: prefs.scoreDropThreshold ?? 5,
+            weeklyReports: prefs.weeklyReports ?? false,
+            testCompletionAlerts: prefs.testCompletionAlerts ?? false,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load notification preferences:', error);
+      }
+    };
+    loadNotificationPrefs();
+  }, []);
 
   // Preferences form
   const preferencesForm = useForm({
