@@ -45,6 +45,7 @@
 ## Completed
 
 ### Feb 27, 2026
+- [x] Priority 2: Email notifications for score drops (backend + frontend UI)
 - [x] Priority 1: Real-time refresh buttons (Dashboard, Tests, Analytics)
 - [x] Fix: Hardcoded scores (85, 90, 85, 90) - installed chromium
 - [x] Fix: Performance score fallback calculation
