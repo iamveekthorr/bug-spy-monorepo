@@ -374,4 +374,165 @@ export class EmailService {
       context: { name },
     });
   }
+
+  /**
+   * Send score drop notification email
+   */
+  async sendScoreDropNotification(
+    email: string,
+    data: {
+      url: string;
+      testType: string;
+      previousScore: number;
+      currentScore: number;
+      scoreDrop: number;
+      testId: string;
+      scheduleName?: string;
+    },
+  ): Promise<void> {
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ||
+      'http://localhost:3000';
+    const testUrl = `${frontendUrl}/dashboard/tests/${data.testId}`;
+
+    const template = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background-color: #e53e3e;
+              color: white;
+              padding: 20px;
+              text-align: center;
+              border-radius: 5px 5px 0 0;
+            }
+            .content {
+              background-color: #f7fafc;
+              padding: 30px;
+              border-radius: 0 0 5px 5px;
+            }
+            .score-box {
+              display: flex;
+              justify-content: space-around;
+              margin: 20px 0;
+              padding: 20px;
+              background-color: white;
+              border-radius: 8px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .score-item {
+              text-align: center;
+            }
+            .score-value {
+              font-size: 36px;
+              font-weight: bold;
+            }
+            .score-label {
+              font-size: 12px;
+              color: #718096;
+              text-transform: uppercase;
+            }
+            .score-previous {
+              color: #48bb78;
+            }
+            .score-current {
+              color: #e53e3e;
+            }
+            .score-drop {
+              color: #e53e3e;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 30px;
+              background-color: #4299e1;
+              color: white;
+              text-decoration: none;
+              border-radius: 5px;
+              margin: 20px 0;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              font-size: 12px;
+              color: #718096;
+            }
+            .warning {
+              background-color: #fff5f5;
+              border-left: 4px solid #fc8181;
+              padding: 15px;
+              margin: 20px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Score Drop Alert</h1>
+            </div>
+            <div class="content">
+              <p>Hello,</p>
+              <p>We detected a significant score drop in your {{testType}} test{{#if scheduleName}} ({{scheduleName}}){{/if}}.</p>
+              
+              <div class="warning">
+                <strong>URL:</strong> {{url}}<br>
+                <strong>Test Type:</strong> {{testType}}
+              </div>
+
+              <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background: white; border-radius: 8px; overflow: hidden;">
+                <tr style="background: #f7fafc;">
+                  <td style="padding: 15px; text-align: center; border-right: 1px solid #e2e8f0;">
+                    <div style="font-size: 12px; color: #718096; text-transform: uppercase;">Previous</div>
+                    <div style="font-size: 32px; font-weight: bold; color: #48bb78;">{{previousScore}}</div>
+                  </td>
+                  <td style="padding: 15px; text-align: center; border-right: 1px solid #e2e8f0;">
+                    <div style="font-size: 12px; color: #718096; text-transform: uppercase;">Current</div>
+                    <div style="font-size: 32px; font-weight: bold; color: #e53e3e;">{{currentScore}}</div>
+                  </td>
+                  <td style="padding: 15px; text-align: center;">
+                    <div style="font-size: 12px; color: #718096; text-transform: uppercase;">Drop</div>
+                    <div style="font-size: 32px; font-weight: bold; color: #e53e3e;">-{{scoreDrop}}</div>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="text-align: center;">
+                <a href="{{{testUrl}}}" class="button">View Test Results</a>
+              </p>
+
+              <p>We recommend reviewing the detailed test results to identify what may have caused this performance degradation.</p>
+
+              <p>Best regards,<br>Bug Spy JS Team</p>
+            </div>
+            <div class="footer">
+              <p>You're receiving this because you have score drop notifications enabled.</p>
+              <p>Manage your notification preferences in your account settings.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await this.sendEmail({
+      to: email,
+      subject: `Score Drop Alert: ${data.url} - ${data.testType} score dropped by ${data.scoreDrop} points`,
+      template,
+      context: { ...data, testUrl },
+    });
+
+    this.logger.log(
+      `Score drop notification sent to ${email} for ${data.url} (${data.previousScore} -> ${data.currentScore})`,
+    );
+  }
 }
