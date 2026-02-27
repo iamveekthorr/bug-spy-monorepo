@@ -13,10 +13,11 @@ A web application that enables users to run web metrics tests and view correspon
 - **SEO Analysis**: Custom SEO metrics service with comprehensive checks
 
 ## Latest Update - Feb 27, 2026
-**Fixes completed:**
-1. **Chromium installed** - Was missing, causing Lighthouse to fail silently
-2. **Performance scores now dynamic** - Fixed fallback calculation when Lighthouse's SpeedIndex fails
-3. **Dashboard tests verified working** - Tests tab correctly fetches and displays results from backend
+**Features completed:**
+1. **Refresh buttons added** - Dashboard, Tests, and Analytics pages now have real-time refresh buttons
+2. **Chromium installed** - Was missing, causing Lighthouse to fail silently
+3. **Performance scores now dynamic** - Fixed fallback calculation when Lighthouse's SpeedIndex fails
+4. **Dashboard tests verified working** - Tests tab correctly fetches and displays results from backend
 
 **Verified working:**
 - Backend unit tests: 13/13 passing
