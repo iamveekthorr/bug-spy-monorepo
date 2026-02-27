@@ -16,6 +16,7 @@ import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { CaptureMetricsModule } from './capture-metrics/capture-metrics.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { NotificationModule } from './notifications/notification.module';
 import { AbortInterceptor } from './interceptors/abort.interceptor';
 
 @Module({
