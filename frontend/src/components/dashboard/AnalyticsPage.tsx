@@ -87,10 +87,21 @@ const AnalyticsPage = () => {
 
   // Backend endpoint /user/analytics/overview is not yet implemented
   // Gracefully handle the missing endpoint
-  const { data: analytics, isLoading, error } = useAnalyticsOverview(timeRangeParams);
+  const { data: analytics, isLoading, error, refetch, isFetching } = useAnalyticsOverview(timeRangeParams);
 
   // Check if the endpoint is not available (404 error)
   const isEndpointNotAvailable = error && (error as any)?.response?.status === 404;
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500); // Minimum animation time
+    }
+  };
 
   const handleExport = async (format: 'csv' | 'pdf') => {
     setIsExporting(true);
