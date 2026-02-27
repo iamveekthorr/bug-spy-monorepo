@@ -9,6 +9,7 @@ import {
   BarChart3,
   PieChart,
   Calendar,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
