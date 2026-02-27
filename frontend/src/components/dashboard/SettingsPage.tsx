@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,6 +14,7 @@ import {
   EyeOff,
   AlertTriangle,
   Check,
+  TrendingDown,
 } from 'lucide-react';
 import { useAuthStore } from '@/store';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
