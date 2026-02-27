@@ -3,14 +3,15 @@
 ## Current Sprint
 
 ### Priority 2: Email Notifications for Score Drops
-- [ ] Research: Determine email service (logged/SendGrid/Resend)
-- [ ] Backend: Create notification service in NestJS
-- [ ] Backend: Add score comparison logic to detect drops
-- [ ] Backend: Store previous scores for comparison
-- [ ] Backend: Create email templates for notifications
-- [ ] Backend: Add notification preferences to user settings
-- [ ] Frontend: Add notification settings UI
-- [ ] Test: Verify email triggers on score drop
+**Decisions**: Logged emails (dev), ≥5 point threshold, scheduled tests only
+
+- [ ] Backend: Create notification service (`api/src/notifications/`)
+- [ ] Backend: Add score comparison logic (≥5 point drop)
+- [ ] Backend: Store previous scores in test results
+- [ ] Backend: Create email templates (HTML)
+- [ ] Backend: Hook into scheduled test completion
+- [ ] Frontend: Add notification toggle in Settings
+- [ ] Test: Run scheduled test, verify log output
 - [ ] Document: Update API docs
 
 ### Priority 3: Historical Performance Trend Charts
