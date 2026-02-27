@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   MoreHorizontal,
   Trash2,
+  RefreshCw,
 } from 'lucide-react';
 import { useTestsStore } from '@/store';
 import { Button } from '@/components/ui/button';
