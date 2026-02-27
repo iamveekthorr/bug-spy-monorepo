@@ -326,4 +326,101 @@ export class UserService {
       throw new AppError('Failed to sync test results', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  /**
+   * Get user notification preferences
+   */
+  async getNotificationPreferences(userId: string) {
+    try {
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new AppError('Invalid user ID format', HttpStatus.BAD_REQUEST);
+      }
+
+      const user = await this.userModel
+        .findById(userId)
+        .select('notificationPreferences')
+        .lean()
+        .exec();
+
+      if (!user) {
+        throw new AppError('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Return default preferences if not set
+      return user.notificationPreferences || {
+        scoreDropAlerts: true,
+        scoreDropThreshold: 5,
+        weeklyReports: false,
+        testCompletionAlerts: false,
+      };
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      this.logger.error(`Failed to get notification preferences: ${error.message}`);
+      throw new AppError('Failed to get notification preferences', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /**
+   * Update user notification preferences
+   */
+  async updateNotificationPreferences(
+    userId: string,
+    preferences: {
+      scoreDropAlerts?: boolean;
+      scoreDropThreshold?: number;
+      weeklyReports?: boolean;
+      testCompletionAlerts?: boolean;
+    },
+  ) {
+    try {
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new AppError('Invalid user ID format', HttpStatus.BAD_REQUEST);
+      }
+
+      // Build update object with only provided fields
+      const updateObj: Record<string, any> = {};
+      if (typeof preferences.scoreDropAlerts === 'boolean') {
+        updateObj['notificationPreferences.scoreDropAlerts'] = preferences.scoreDropAlerts;
+      }
+      if (typeof preferences.scoreDropThreshold === 'number') {
+        // Ensure threshold is between 1 and 50
+        updateObj['notificationPreferences.scoreDropThreshold'] = Math.min(50, Math.max(1, preferences.scoreDropThreshold));
+      }
+      if (typeof preferences.weeklyReports === 'boolean') {
+        updateObj['notificationPreferences.weeklyReports'] = preferences.weeklyReports;
+      }
+      if (typeof preferences.testCompletionAlerts === 'boolean') {
+        updateObj['notificationPreferences.testCompletionAlerts'] = preferences.testCompletionAlerts;
+      }
+
+      const updated = await this.userModel
+        .findByIdAndUpdate(
+          userId,
+          { $set: updateObj },
+          { new: true },
+        )
+        .select('notificationPreferences')
+        .lean()
+        .exec();
+
+      if (!updated) {
+        throw new AppError('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      this.logger.log(`Notification preferences updated for user ${userId}`);
+
+      return {
+        message: 'Notification preferences updated successfully',
+        preferences: updated.notificationPreferences,
+      };
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      this.logger.error(`Failed to update notification preferences: ${error.message}`);
+      throw new AppError('Failed to update notification preferences', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }
