@@ -28,8 +28,8 @@ export const CACHE_CONFIG = {
  * Request Timeout Configuration
  */
 export const REQUEST_TIMEOUT_CONFIG = {
-  PERFORMANCE_TEST_MS: 30000, // 30 seconds
-  PERFORMANCE_TEST_EXTENDED_MS: 45000, // 45 seconds for slower operations
+  PERFORMANCE_TEST_MS: 90000, // 90 seconds (increased from 30)
+  PERFORMANCE_TEST_EXTENDED_MS: 120000, // 120 seconds for slower operations (increased from 45)
   SCREENSHOT_INTERVAL_MS: 300, // 300ms between progressive screenshots
   NETWORK_IDLE_TIME_MS: 500, // 500ms of network silence
   PAGE_CLOSE_FORCE_TIMEOUT_MS: 5000, // 5 seconds max for force close
