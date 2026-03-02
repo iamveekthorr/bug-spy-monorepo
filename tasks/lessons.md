@@ -26,6 +26,15 @@
 
 ## Corrections Log
 
+### Session: Mar 02, 2026
+- **Issue**: Tests timing out for complex websites (github.com, bbc.com)
+- **Root Cause**: Timeout set to 30 seconds, insufficient for complex sites
+- **Fix**: Increased timeouts in:
+  - `capture.config.ts`: PERFORMANCE_TEST_MS: 30000 → 90000
+  - `capture-orchestrator.service.ts`: 30000 → 90000
+  - `timeout-config.service.ts`: All environment timeouts increased 2-3x
+- **Lesson**: Complex sites need at least 60-90 seconds for full Lighthouse analysis
+
 ### Session: Feb 27, 2026
 - **Issue**: User reported hardcoded scores (85, 90, 85, 90)
 - **Root Cause**: Chromium not installed, Lighthouse failing silently
