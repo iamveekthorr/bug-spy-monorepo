@@ -89,7 +89,8 @@ export class CaptureOrchestratorService implements OnModuleDestroy {
       });
 
       // Add a safety timeout to prevent hanging connections
-      const timeoutMs = testType === 'performance' ? 30000 : 45000;
+      // Increased timeouts for complex websites
+      const timeoutMs = testType === 'performance' ? 90000 : 120000;
 
       const timeoutId = setTimeout(() => {
         this.logger.warn(
