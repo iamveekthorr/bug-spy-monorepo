@@ -15,6 +15,8 @@ import {
   Smartphone,
   Monitor,
   Tablet,
+  History,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +25,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { TestSchedule } from '@/types';
+import {
+  useSchedules,
+  useCreateSchedule,
+  useUpdateSchedule,
+  useDeleteSchedule,
+  useToggleSchedule,
+} from '@/hooks/useSchedules';
 
 const scheduleSchema = z.object({
   name: z.string().min(1, 'Schedule name is required'),
@@ -34,48 +43,18 @@ const scheduleSchema = z.object({
 
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
-// Mock scheduled tests data
-const mockSchedules: TestSchedule[] = [
-  {
-    id: '1',
-    name: 'Production Site Monitor',
-    url: 'https://myapp.com',
-    frequency: 'hourly',
-    testType: 'performance',
-    deviceType: 'desktop',
-    isActive: true,
-    nextRun: '2024-01-07T12:00:00Z',
-    lastRun: '2024-01-07T11:00:00Z',
-  },
-  {
-    id: '2',
-    name: 'Mobile Experience Check',
-    url: 'https://myapp.com',
-    frequency: 'daily',
-    testType: 'ui',
-    deviceType: 'mobile',
-    isActive: true,
-    nextRun: '2024-01-08T09:00:00Z',
-    lastRun: '2024-01-07T09:00:00Z',
-  },
-  {
-    id: '3',
-    name: 'Weekly Full Audit',
-    url: 'https://demo.site.com',
-    frequency: 'weekly',
-    testType: 'full',
-    deviceType: 'desktop',
-    isActive: false,
-    nextRun: '2024-01-14T10:00:00Z',
-    lastRun: '2024-01-01T10:00:00Z',
-  },
-];
-
 const ScheduledPage = () => {
-  const [schedules, setSchedules] = useState<TestSchedule[]>(mockSchedules);
+  // Use real API hooks
+  const { data: schedulesData, isLoading: isLoadingSchedules, refetch } = useSchedules();
+  const createSchedule = useCreateSchedule();
+  const updateSchedule = useUpdateSchedule();
+  const deleteSchedule = useDeleteSchedule();
+  const toggleSchedule = useToggleSchedule();
+
+  const schedules = schedulesData || [];
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<TestSchedule | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [showLogs, setShowLogs] = useState<string | null>(null);
 
   const form = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
@@ -109,53 +88,54 @@ const ScheduledPage = () => {
   }, [editingSchedule, form]);
 
   const onSubmit: SubmitHandler<ScheduleFormData> = async (data) => {
-    setIsLoading(true);
-
     try {
-      // Mock API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       if (editingSchedule) {
         // Update existing schedule
-        setSchedules(prev =>
-          prev.map(schedule =>
-            schedule.id === editingSchedule.id
-              ? { ...schedule, ...data }
-              : schedule
-          )
-        );
+        await updateSchedule.mutateAsync({
+          id: editingSchedule.id,
+          data: {
+            name: data.name,
+            url: data.url,
+            frequency: data.frequency,
+            testType: data.testType,
+            deviceType: data.deviceType,
+          },
+        });
       } else {
         // Create new schedule
-        const newSchedule: TestSchedule = {
-          id: Date.now().toString(),
-          ...data,
-          isActive: true,
-          nextRun: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        };
-        setSchedules(prev => [newSchedule, ...prev]);
+        await createSchedule.mutateAsync({
+          name: data.name,
+          url: data.url,
+          frequency: data.frequency,
+          testType: data.testType,
+          deviceType: data.deviceType,
+        });
       }
 
       setIsModalOpen(false);
       setEditingSchedule(null);
     } catch (error) {
-      console.error('Failed to save schedule');
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to save schedule:', error);
     }
   };
 
-  const toggleSchedule = (id: string) => {
-    setSchedules(prev =>
-      prev.map(schedule =>
-        schedule.id === id
-          ? { ...schedule, isActive: !schedule.isActive }
-          : schedule
-      )
-    );
+  const handleToggleSchedule = async (id: string) => {
+    try {
+      await toggleSchedule.mutateAsync(id);
+    } catch (error) {
+      console.error('Failed to toggle schedule:', error);
+    }
   };
 
-  const deleteSchedule = (id: string) => {
-    setSchedules(prev => prev.filter(schedule => schedule.id !== id));
+  const handleDeleteSchedule = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this schedule?')) {
+      return;
+    }
+    try {
+      await deleteSchedule.mutateAsync(id);
+    } catch (error) {
+      console.error('Failed to delete schedule:', error);
+    }
   };
 
   const openEditModal = (schedule: TestSchedule) => {
@@ -203,13 +183,34 @@ const ScheduledPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Scheduled Tests</h1>
           <p className="text-gray-600 mt-1">Automate your website testing with scheduled runs</p>
         </div>
-        <Button onClick={openCreateModal}>
-          <Plus size={16} className="mr-2" />
-          New Schedule
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isLoadingSchedules}
+            data-testid="schedules-refresh-btn"
+          >
+            <RefreshCw size={16} className={cn("mr-2", isLoadingSchedules && "animate-spin")} />
+            {isLoadingSchedules ? 'Loading...' : 'Refresh'}
+          </Button>
+          <Button onClick={openCreateModal}>
+            <Plus size={16} className="mr-2" />
+            New Schedule
+          </Button>
+        </div>
       </div>
 
+      {/* Loading State */}
+      {isLoadingSchedules && schedules.length === 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading schedules...</p>
+        </div>
+      )}
+
       {/* Schedules List */}
+      {!isLoadingSchedules && (
       <div className="bg-white rounded-lg border border-gray-200">
         {schedules.length > 0 ? (
           <div className="divide-y divide-gray-200">
@@ -272,7 +273,8 @@ const ScheduledPage = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleSchedule(schedule.id)}
+                        onClick={() => handleToggleSchedule(schedule.id)}
+                        disabled={toggleSchedule.isPending}
                       >
                         {schedule.isActive ? (
                           <Pause size={16} className="text-orange-500" />
@@ -290,16 +292,57 @@ const ScheduledPage = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteSchedule(schedule.id)}
+                        onClick={() => handleDeleteSchedule(schedule.id)}
+                        disabled={deleteSchedule.isPending}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 size={16} />
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal size={16} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowLogs(showLogs === schedule.id ? null : schedule.id)}
+                        title="View execution logs"
+                      >
+                        <History size={16} />
                       </Button>
                     </div>
                   </div>
+                  
+                  {/* Execution Logs Section */}
+                  {showLogs === schedule.id && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                      <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                        <History size={14} />
+                        Execution History
+                      </h4>
+                      {schedule.executionLogs && schedule.executionLogs.length > 0 ? (
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {schedule.executionLogs.map((log: any, index: number) => (
+                            <div
+                              key={index}
+                              className={cn(
+                                "p-2 rounded text-sm",
+                                log.status === 'success' ? 'bg-green-50 text-green-700' :
+                                log.status === 'failed' ? 'bg-red-50 text-red-700' :
+                                'bg-gray-100 text-gray-600'
+                              )}
+                            >
+                              <div className="flex justify-between items-center">
+                                <span>{new Date(log.timestamp).toLocaleString()}</span>
+                                <span className="font-medium capitalize">{log.status}</span>
+                              </div>
+                              {log.message && (
+                                <p className="text-xs mt-1 opacity-80">{log.message}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">No execution logs yet. Logs will appear after the schedule runs.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -318,6 +361,7 @@ const ScheduledPage = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Create/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={(open) => {
@@ -443,8 +487,8 @@ const ScheduledPage = () => {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
+              <Button type="submit" disabled={createSchedule.isPending || updateSchedule.isPending}>
+                {(createSchedule.isPending || updateSchedule.isPending) ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     {editingSchedule ? 'Updating...' : 'Creating...'}

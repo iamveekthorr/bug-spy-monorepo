@@ -40,12 +40,18 @@
 ## MEDIUM PRIORITY BUGS (P1)
 
 ### BUG-7: Log Creation Not Showing for Scheduled Tests
-- **Status**: NOT STARTED
-- **Impact**: No visibility into scheduled test execution
+- **Status**: ✅ FIXED
+- **Fix**: 
+  - Replaced mock data with real API hooks (useSchedules)
+  - Added execution logs section with toggle button
+  - Added History icon to view logs
+- **Note**: Logs will appear after schedule executes
 
 ### BUG-8: "View Report" Redirects to Dashboard Instead of Test Result
-- **Status**: NOT STARTED
+- **Status**: IN PROGRESS
 - **Expected**: Should redirect to specific test result page
+- **Root cause**: Non-logged-in users don't have test IDs saved
+- **Proposed fix**: Save test to server for logged-in users, get ID, use in link
 
 ---
 
@@ -108,5 +114,5 @@
 | BUG-4 | ✅ FIXED | - | Export/Delete dropdown added |
 | BUG-5 | ✅ FIXED | - | Result column shows score |
 | BUG-6 | NOT STARTED | - | URL entries |
-| BUG-7 | NOT STARTED | - | Schedule logs |
-| BUG-8 | NOT STARTED | - | View Report redirect |
+| BUG-7 | ✅ FIXED | - | Schedule logs added |
+| BUG-8 | IN PROGRESS | - | View Report redirect |
