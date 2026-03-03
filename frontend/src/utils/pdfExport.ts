@@ -428,3 +428,15 @@ export const exportPerformanceReportToPdf = (test: TestResult): void => {
   const filename = `performance-report-${test.url.replace(/[^a-z0-9]/gi, '-').substring(0, 30)}-${Date.now()}.pdf`;
   doc.save(filename);
 };
+
+
+/**
+ * General export function that routes to the appropriate report type
+ */
+export const exportTestToPdf = (test: TestResult): void => {
+  if (test.testType === 'seo' || test.results?.webMetrics?.seoAnalysis) {
+    exportSeoReportToPdf(test);
+  } else {
+    exportPerformanceReportToPdf(test);
+  }
+};

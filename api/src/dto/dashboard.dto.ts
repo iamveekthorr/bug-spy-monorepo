@@ -361,17 +361,17 @@ export class BulkTestOperationDto {
 export class PerformanceAnalyticsQueryDto {
   @IsOptional()
   @IsString()
-  @IsIn(['7d', '30d', '90d', '1y'], {
-    message: 'period must be one of: 7d, 30d, 90d, 1y',
+  @IsIn(['day', 'week', 'month', 'year', '7d', '30d', '90d', '1y'], {
+    message: 'period must be one of: day, week, month, year, 7d, 30d, 90d, 1y',
   })
-  readonly period?: '7d' | '30d' | '90d' | '1y' = '30d';
+  readonly period?: string = '30d';
 
   @IsOptional()
   @IsString()
-  @IsIn(['performance', 'screenshot', 'cookie', 'all'], {
-    message: 'testType must be one of: performance, screenshot, cookie, all',
+  @IsIn(['performance', 'seo', 'screenshot', 'cookie', 'all'], {
+    message: 'testType must be one of: performance, seo, screenshot, cookie, all',
   })
-  readonly testType?: 'performance' | 'screenshot' | 'cookie' | 'all' = 'all';
+  readonly testType?: string = 'all';
 
   @IsOptional()
   @IsString()

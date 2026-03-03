@@ -614,7 +614,8 @@ export class DashboardService {
   }
 
   /**
-   * Get performance analytics over time
+   * Get comprehensive performance analytics over time
+   * Returns data for all charts: Performance Trends, Error Distribution, Test Type Breakdown, Device Performance
    */
   async getPerformanceAnalytics(
     userId: string,
@@ -631,14 +632,18 @@ export class DashboardService {
 
       // Calculate date range based on period
       const now = new Date();
-      const periodMap = {
+      const periodMap: Record<string, number> = {
+        'day': 1 * 24 * 60 * 60 * 1000,
+        'week': 7 * 24 * 60 * 60 * 1000,
+        'month': 30 * 24 * 60 * 60 * 1000,
+        'year': 365 * 24 * 60 * 60 * 1000,
         '7d': 7 * 24 * 60 * 60 * 1000,
         '30d': 30 * 24 * 60 * 60 * 1000,
         '90d': 90 * 24 * 60 * 60 * 1000,
         '1y': 365 * 24 * 60 * 60 * 1000,
       };
 
-      const startDate = new Date(now.getTime() - periodMap[period]);
+      const startDate = new Date(now.getTime() - (periodMap[period] || periodMap['30d']));
 
       // Build filter
       const filter: FilterQuery<TestResult> = {
@@ -656,36 +661,103 @@ export class DashboardService {
         filter.url = url;
       }
 
-      // Get tests with performance metrics
+      // Get all tests with comprehensive data
       const tests = await this.testResultModel
         .find(filter)
-        .select('createdAt performanceScore results.webMetrics.metrics')
+        .select('createdAt performanceScore results testConfig url')
         .sort({ createdAt: 1 })
         .lean()
         .exec();
 
-      // Group by date and calculate averages
-      const dataPoints = tests.map((test) => ({
-        date: test.createdAt,
-        score: test.performanceScore || 0,
-        metrics: test.results?.webMetrics?.metrics,
+      // 1. Performance Trends - Group by date
+      const trendsByDate = new Map<string, { scores: number[], count: number }>();
+      tests.forEach((test) => {
+        const dateKey = new Date(test.createdAt).toISOString().split('T')[0];
+        if (!trendsByDate.has(dateKey)) {
+          trendsByDate.set(dateKey, { scores: [], count: 0 });
+        }
+        const entry = trendsByDate.get(dateKey)!;
+        entry.scores.push(test.performanceScore || 0);
+        entry.count++;
+      });
+
+      const performanceTrends = Array.from(trendsByDate.entries()).map(([date, data]) => ({
+        date,
+        averageScore: Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length),
+        testCount: data.count,
       }));
 
+      // 2. Error Distribution - Aggregate console errors from tests
+      const errorCounts = { javascript: 0, network: 0, console: 0, other: 0 };
+      tests.forEach((test) => {
+        const consoleErrors = test.results?.consoleErrors;
+        if (consoleErrors) {
+          errorCounts.javascript += consoleErrors.errors?.javascript?.length || 0;
+          errorCounts.network += consoleErrors.errors?.network?.length || 0;
+          errorCounts.other += consoleErrors.errors?.other?.length || 0;
+        }
+      });
+
+      const totalErrors = Object.values(errorCounts).reduce((a, b) => a + b, 0);
+      const errorDistribution = [
+        { type: 'javascript', count: errorCounts.javascript, severity: errorCounts.javascript > 10 ? 'high' : 'low' },
+        { type: 'network', count: errorCounts.network, severity: errorCounts.network > 5 ? 'medium' : 'low' },
+        { type: 'console', count: errorCounts.other, severity: 'low' },
+      ].filter(e => e.count > 0);
+
+      // 3. Test Type Breakdown
+      const testTypeMap = new Map<string, { count: number, scores: number[] }>();
+      tests.forEach((test) => {
+        const type = test.testConfig?.testType || 'performance';
+        if (!testTypeMap.has(type)) {
+          testTypeMap.set(type, { count: 0, scores: [] });
+        }
+        const entry = testTypeMap.get(type)!;
+        entry.count++;
+        entry.scores.push(test.performanceScore || 0);
+      });
+
+      const testTypeBreakdown = Array.from(testTypeMap.entries()).map(([testType, data]) => ({
+        testType,
+        count: data.count,
+        averageScore: Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length),
+      }));
+
+      // 4. Device Breakdown
+      const deviceMap = new Map<string, { count: number, scores: number[] }>();
+      tests.forEach((test) => {
+        const device = test.testConfig?.deviceType || 'desktop';
+        if (!deviceMap.has(device)) {
+          deviceMap.set(device, { count: 0, scores: [] });
+        }
+        const entry = deviceMap.get(device)!;
+        entry.count++;
+        entry.scores.push(test.performanceScore || 0);
+      });
+
+      const deviceBreakdown = Array.from(deviceMap.entries()).map(([deviceType, data]) => ({
+        deviceType,
+        count: data.count,
+        averageScore: Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length),
+      }));
+
+      // Calculate overall average
+      const averagePerformanceScore = tests.length > 0
+        ? Math.round(tests.reduce((sum, t) => sum + (t.performanceScore || 0), 0) / tests.length)
+        : 0;
+
       return {
+        performanceTrends,
+        errorDistribution,
+        testTypeBreakdown,
+        deviceBreakdown,
+        totalTests: tests.length,
+        totalIssues: totalErrors,
+        averagePerformanceScore,
+        improvementRate: 0, // Would need historical data to calculate
         period,
         startDate,
         endDate: now,
-        dataPoints,
-        summary: {
-          totalTests: tests.length,
-          averageScore:
-            tests.length > 0
-              ? Math.round(
-                  tests.reduce((sum, t) => sum + (t.performanceScore || 0), 0) /
-                    tests.length,
-                )
-              : 0,
-        },
       };
     } catch (error) {
       if (error instanceof AppError) {

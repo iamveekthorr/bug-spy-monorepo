@@ -12,6 +12,7 @@ import {
   MoreHorizontal,
   Trash2,
   RefreshCw,
+  FileText,
 } from 'lucide-react';
 import { useTestsStore } from '@/store';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import type { TestResult } from '@/types';
 import { useUserTests } from '@/hooks/useDashboard';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { exportTestToPdf } from '@/utils/pdfExport';
+import { api } from '@/lib/api-client';
+import { useToast } from '@/hooks/useToast';
 
 
 const TestStatusBadge = ({ status }: { status: string }) => {
@@ -46,6 +56,7 @@ const TestsPage = () => {
   const { filters, setFilters } = useTestsStore();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
+  const toast = useToast();
 
   const {
     data: userTests = [],
@@ -57,6 +68,32 @@ const TestsPage = () => {
 
   const handleRefresh = async () => {
     await refetch();
+  };
+
+  const handleExportTest = async (test: TestResult) => {
+    try {
+      toast.info('Generating PDF...');
+      await exportTestToPdf(test);
+      toast.success('PDF downloaded successfully');
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('Failed to export test');
+    }
+  };
+
+  const handleDeleteTest = async (testId: string) => {
+    if (!confirm('Are you sure you want to delete this test?')) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/dashboard/tests/${testId}`);
+      toast.success('Test deleted successfully');
+      refetch();
+    } catch (error) {
+      console.error('Delete failed:', error);
+      toast.error('Failed to delete test');
+    }
   };
 
   const tests = userTests;
@@ -428,14 +465,19 @@ const TestsPage = () => {
 
                     {/* Results */}
                     <div className="col-span-2">
-                      {test.results ? (
+                      {test.results?.webMetrics ? (
                         <div className="space-y-1">
-                          {test.results.performanceMetrics && (
+                          {(test.results.webMetrics.performanceScore !== undefined || 
+                            test.results.webMetrics.seoScore !== undefined) && (
                             <p className={cn(
                               'text-sm font-medium',
-                              getPerformanceColor(test.results.performanceMetrics.performanceScore)
+                              getPerformanceColor(
+                                test.results.webMetrics.performanceScore || 
+                                test.results.webMetrics.seoScore || 0
+                              )
                             )}>
-                              Score: {test.results.performanceMetrics.performanceScore}%
+                              Score: {test.results.webMetrics.performanceScore || 
+                                test.results.webMetrics.seoScore || 0}%
                             </p>
                           )}
                           {getErrorCount(test) > 0 && (
@@ -443,6 +485,15 @@ const TestsPage = () => {
                               {getErrorCount(test)} issue{getErrorCount(test) > 1 ? 's' : ''}
                             </p>
                           )}
+                        </div>
+                      ) : test.results?.performanceMetrics ? (
+                        <div className="space-y-1">
+                          <p className={cn(
+                            'text-sm font-medium',
+                            getPerformanceColor(test.results.performanceMetrics.performanceScore)
+                          )}>
+                            Score: {test.results.performanceMetrics.performanceScore}%
+                          </p>
                         </div>
                       ) : (
                         <span className="text-xs text-gray-500">
@@ -462,13 +513,34 @@ const TestsPage = () => {
                     <div className="col-span-1">
                       <div className="flex items-center space-x-2">
                         <Link to={`/dashboard/tests/${test.id}`}>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" data-testid={`view-test-${test.id}`}>
                             <Eye size={16} />
                           </Button>
                         </Link>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal size={16} />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" data-testid={`more-actions-${test.id}`}>
+                              <MoreHorizontal size={16} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => handleExportTest(test)}
+                              data-testid={`export-test-${test.id}`}
+                            >
+                              <FileText size={14} className="mr-2" />
+                              Export PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteTest(test.id)}
+                              className="text-red-600"
+                              data-testid={`delete-test-${test.id}`}
+                            >
+                              <Trash2 size={14} className="mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </div>
