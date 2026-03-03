@@ -4,6 +4,8 @@ import { Controller, useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { indexedDBService } from '@/lib/indexedDB';
+import { useAuthStore } from '@/store';
+import { api } from '@/lib/api-client';
 
 import DashboardImage from '@/assets/dashboard.png';
 import DownloadCard from '@/assets/download-card.png';
@@ -89,6 +91,7 @@ const normalizeUrl = (input: string): string => {
 
 const Index = () => {
   const { openSignupModal } = useUIStore();
+  const { isAuthenticated, accessToken } = useAuthStore();
   const form = useForm<InputData>({
     defaultValues: {
       url: '',
@@ -99,6 +102,7 @@ const Index = () => {
   });
 
   const [open, toggleOpen] = useState(false);
+  const [savedTestId, setSavedTestId] = useState<string | null>(null);
 
   // Initialize IndexedDB on component mount
   useEffect(() => {
@@ -116,7 +120,7 @@ const Index = () => {
   // 3) Make button disabled when it's page is loading
   // 4) display result in the modal
 
-  const [, setTimeline] = useState<SSEEvent[]>([]);
+  const [timeline, setTimeline] = useState<SSEEvent[]>([]);
   const [status, setStatus] = useState();
   const [results, setResults] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -129,16 +133,38 @@ const Index = () => {
       setResults(event.results);
       setIsLoading(false);
 
-      // Save test result to IndexedDB
+      const formValues = form.getValues();
+      
+      // For logged-in users, sync to server and get test ID
+      if (isAuthenticated && accessToken) {
+        try {
+          const response = await api.post('/user/tests/sync', {
+            tests: [{
+              url: formValues.url,
+              testType: formValues.testType,
+              deviceType: formValues.deviceType,
+              results: event.results || {},
+              timestamp: Date.now(),
+            }]
+          });
+          // Try to get the test ID from the response
+          if (response.data?.data?.testId) {
+            setSavedTestId(response.data.data.testId);
+          }
+        } catch (error) {
+          console.error('Failed to sync test to server:', error);
+        }
+      }
+
+      // Save test result to IndexedDB for offline support
       try {
-        const formValues = form.getValues();
         await indexedDBService.saveTestResult({
           url: formValues.url,
           testType: formValues.testType,
           deviceType: formValues.deviceType,
           results: event.results || {},
           timestamp,
-          syncedToServer: false,
+          syncedToServer: isAuthenticated,
         });
       } catch (error) {
         console.error('Failed to save test result to IndexedDB:', error);
@@ -151,6 +177,7 @@ const Index = () => {
     setResults(null);
     setError(null);
     setIsLoading(false);
+    setSavedTestId(null);
   };
 
   const startTest = (data: InputData) => {
@@ -345,7 +372,7 @@ const Index = () => {
                 </div>
               </div>
             ) : status !== 'COMPLETE' ? (
-              // Loading State - Improved with animations
+              // Loading State - Improved with animations and progress
               <div className="text-white max-w-lg mx-auto animate-in fade-in zoom-in-95 duration-500">
                 <div className="mb-6 md:mb-10">
                   {/* Animated spinner */}
@@ -364,6 +391,14 @@ const Index = () => {
                   <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 md:mb-5 text-center">
                     Performing BugSpy Magic...
                   </h2>
+
+                  {/* Progress bar */}
+                  <div className="w-full bg-white/20 rounded-full h-2 mb-4">
+                    <div 
+                      className="bg-white h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(timeline.length * 10, 90)}%` }}
+                    ></div>
+                  </div>
 
                   {/* Status with smooth transition */}
                   <div className="relative h-8 md:h-10 mb-4 overflow-hidden">
@@ -915,35 +950,51 @@ const Index = () => {
                           </div>
                         )}
 
-                      {/* Preview Notice & Action Buttons - Blue Theme */}
+                      {/* Preview Notice & Action Buttons */}
                       <div className="mt-6 space-y-4">
-                        <div className="inline-block p-3 px-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-                          <p className="text-sm font-semibold text-gray-800 mb-1">
-                            Limited Preview
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            Sign up for detailed analysis and full reports
-                          </p>
-                        </div>
+                        {/* Only show Limited Preview for non-logged-in users */}
+                        {!isAuthenticated && (
+                          <div className="inline-block p-3 px-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                            <p className="text-sm font-semibold text-gray-800 mb-1">
+                              Limited Preview
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Sign up for detailed analysis and full reports
+                            </p>
+                          </div>
+                        )}
 
                         {/* Action Buttons */}
                         <div className="flex flex-col sm:flex-row gap-3">
-                          <Link to="/dashboard" className="sm:w-auto">
-                            <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all px-6 py-3 h-auto">
-                              View Report
-                            </Button>
-                          </Link>
-                          <Button
-                            variant={'outline'}
-                            onClick={() => {
-                              toggleOpen(false);
-                              resetTestState();
-                              openSignupModal();
-                            }}
-                            className="sm:w-auto border-gray-300 text-gray-900 hover:bg-gray-50 transition-all px-6 py-3 h-auto"
-                          >
-                            Sign Up
-                          </Button>
+                          {isAuthenticated ? (
+                            <Link 
+                              to={savedTestId ? `/dashboard/tests/${savedTestId}` : '/dashboard/tests'} 
+                              className="sm:w-auto"
+                            >
+                              <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all px-6 py-3 h-auto">
+                                View Full Report
+                              </Button>
+                            </Link>
+                          ) : (
+                            <>
+                              <Link to="/dashboard" className="sm:w-auto">
+                                <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all px-6 py-3 h-auto">
+                                  View Report
+                                </Button>
+                              </Link>
+                              <Button
+                                variant={'outline'}
+                                onClick={() => {
+                                  toggleOpen(false);
+                                  resetTestState();
+                                  openSignupModal();
+                                }}
+                                className="sm:w-auto border-gray-300 text-gray-900 hover:bg-gray-50 transition-all px-6 py-3 h-auto"
+                              >
+                                Sign Up
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

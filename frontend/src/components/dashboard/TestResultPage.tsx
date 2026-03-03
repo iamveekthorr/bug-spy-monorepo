@@ -441,16 +441,20 @@ const TestResultPage = () => {
     return 'poor';
   };
 
-  const tabs = [
-    { id: 'overview', name: 'Overview', icon: FileText },
-    { id: 'performance', name: 'Performance', icon: Clock },
-    { id: 'seo', name: 'SEO', icon: Search },
-    { id: 'errors', name: 'Issues', icon: AlertTriangle, count: test.results?.errors?.length },
-    { id: 'screenshots', name: 'Screenshots', icon: Eye },
-    { id: 'network', name: 'Network', icon: Network },
-    { id: 'console', name: 'Console', icon: Terminal },
-    { id: 'accessibility', name: 'Accessibility', icon: UserCheck },
+  // Dynamic tabs - only show tabs with actual content
+  const allTabs = [
+    { id: 'overview', name: 'Overview', icon: FileText, alwaysShow: true },
+    { id: 'performance', name: 'Performance', icon: Clock, alwaysShow: true },
+    { id: 'seo', name: 'SEO', icon: Search, hasContent: test.testType === 'seo' || !!test.results?.webMetrics?.seoAnalysis },
+    { id: 'errors', name: 'Issues', icon: AlertTriangle, count: test.results?.errors?.length || 0, hasContent: (test.results?.errors?.length || 0) > 0 },
+    { id: 'screenshots', name: 'Screenshots', icon: Eye, hasContent: test.results?.screenshots && Object.keys(test.results.screenshots).length > 0 },
+    { id: 'network', name: 'Network', icon: Network, hasContent: !!test.results?.webMetrics?.networkStats },
+    { id: 'console', name: 'Console', icon: Terminal, hasContent: !!test.results?.consoleErrors },
+    { id: 'accessibility', name: 'Accessibility', icon: UserCheck, hasContent: !!test.results?.webMetrics?.accessibilityScore },
   ];
+  
+  // Filter to only show tabs that have content (or are set to always show)
+  const tabs = allTabs.filter(tab => tab.alwaysShow || tab.hasContent);
 
   return (
     <div className="p-6 space-y-6">
