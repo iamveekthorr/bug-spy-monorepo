@@ -6,10 +6,11 @@ const TEST_PASSWORD = 'TestPass123!';
 // More resilient login helper that handles Cloudflare and various states
 async function ensureLoggedIn(page: Page): Promise<boolean> {
   try {
-    // Go to dashboard with shorter timeout
-    await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 15000 });
-    // Small wait for React to render
-    await page.waitForTimeout(2000);
+    // Go to dashboard with networkidle and longer timeout for Cloudflare
+    await page.goto('/dashboard', { waitUntil: 'networkidle', timeout: 30000 });
+    
+    // Wait for React to render (Cloudflare takes extra time)
+    await page.waitForTimeout(3000);
     
     // Check for blank page (Cloudflare block)
     const bodyContent = await page.locator('body').textContent().catch(() => '');
@@ -20,20 +21,20 @@ async function ensureLoggedIn(page: Page): Promise<boolean> {
     
     // Check if login modal appears
     const dialogLocator = page.locator('[role="dialog"]');
-    const isDialogVisible = await dialogLocator.isVisible({ timeout: 3000 }).catch(() => false);
+    const isDialogVisible = await dialogLocator.isVisible({ timeout: 5000 }).catch(() => false);
     
     if (isDialogVisible) {
-      // Login via modal
-      await dialogLocator.locator('input#email').fill(TEST_EMAIL);
-      await dialogLocator.locator('input#password').fill(TEST_PASSWORD);
-      await dialogLocator.locator('button[type="submit"]').click();
+      // Login via modal - use placeholder-based selectors for robustness
+      await dialogLocator.locator('input[placeholder*="you@example.com"]').fill(TEST_EMAIL);
+      await dialogLocator.locator('input[placeholder*="Enter your password"]').fill(TEST_PASSWORD);
+      await dialogLocator.locator('button:has-text("Sign in")').click();
       
       // Wait for dashboard URL
       await page.waitForURL(/\/dashboard/, { timeout: 15000 });
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(2000);
     }
     
-    // Verify we're logged in
+    // Verify we're logged in by checking for sidebar
     const sidebar = await page.locator('text=Dashboard').first().isVisible({ timeout: 5000 }).catch(() => false);
     return sidebar;
   } catch (error) {
@@ -221,6 +222,33 @@ test.describe('Test Result Page', () => {
         await expect(page.getByText(/meta|description|missing/i).first()).toBeVisible({ timeout: 5000 });
       }
     }
+  });
+
+  test('should trigger autorun when clicking Rerun Test button', async ({ page }) => {
+    const firstTestLink = page.locator('a[href*="/dashboard/tests/"]').first();
+    if (await firstTestLink.count() === 0) {
+      test.skip();
+      return;
+    }
+    
+    await firstTestLink.click();
+    await page.waitForURL(/\/dashboard\/tests\/[a-z0-9]+/i);
+    await page.waitForTimeout(1500);
+    
+    // Click Rerun Test button
+    await page.getByTestId('rerun-test-btn').click();
+    
+    // Should navigate to homepage with autorun parameter and start test
+    await page.waitForURL(/\/\?.*autorun=true/i, { timeout: 5000 }).catch(() => {
+      // URL params may have been cleared - check for running test
+    });
+    
+    // Wait for test modal/progress to appear - test should start automatically
+    await page.waitForTimeout(2000);
+    
+    // Verify test is running - look for progress indicator
+    const testRunning = await page.getByText(/performing|page ready|scanning|processing/i).first().isVisible({ timeout: 10000 }).catch(() => false);
+    expect(testRunning).toBeTruthy();
   });
 });
 

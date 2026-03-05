@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Controller, useForm, type SubmitHandler } from 'react-hook-form';
+import { useSearchParams } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { indexedDBService } from '@/lib/indexedDB';
@@ -92,6 +93,9 @@ const normalizeUrl = (input: string): string => {
 const Index = () => {
   const { openSignupModal } = useUIStore();
   const { isAuthenticated, accessToken } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const autorunTriggered = useRef(false);
+  
   const form = useForm<InputData>({
     defaultValues: {
       url: '',
@@ -110,6 +114,33 @@ const Index = () => {
       console.error('Failed to initialize IndexedDB:', error);
     });
   }, []);
+
+  // Handle autorun from URL parameters (for rerun test functionality)
+  useEffect(() => {
+    if (autorunTriggered.current) return;
+    
+    const urlParam = searchParams.get('url');
+    const testTypeParam = searchParams.get('testType');
+    const deviceTypeParam = searchParams.get('deviceType');
+    const autorunParam = searchParams.get('autorun');
+    
+    if (urlParam && autorunParam === 'true' && isAuthenticated) {
+      autorunTriggered.current = true;
+      
+      // Set form values
+      form.setValue('url', urlParam);
+      form.setValue('testType', testTypeParam || 'performance');
+      form.setValue('deviceType', deviceTypeParam || 'desktop');
+      
+      // Clear URL params to prevent re-triggering
+      setSearchParams({});
+      
+      // Trigger test run after form is set
+      setTimeout(() => {
+        form.handleSubmit(onSubmit)();
+      }, 100);
+    }
+  }, [searchParams, isAuthenticated, form, setSearchParams]);
 
   // define regex pattern
 

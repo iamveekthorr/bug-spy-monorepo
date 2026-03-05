@@ -175,7 +175,7 @@ Based on seoitis.com clean card-based design with original blue brand colors:
 - `/app/frontend/src/components/layout/DashboardLayout.tsx` - Dashboard sidebar
 
 ## Testing Status
-- Test reports: `/app/test_reports/iteration_1.json` through `/app/test_reports/iteration_5.json`
+- Test reports: `/app/test_reports/iteration_1.json` through `/app/test_reports/iteration_6.json`
 - Backend API test pass rate: 100% (7/7)
 - Frontend test pass rate: 100%
 - All features verified working via screenshots and API tests
@@ -185,16 +185,22 @@ Based on seoitis.com clean card-based design with original blue brand colors:
 1. **Fixed React Hook Order Error** - Critical bug in TestResultPage.tsx where useToast() and useState(isRerunning) were called after conditional returns, causing "Rendered more hooks than during the previous render" error
 2. **Fixed View Report Redirect** - Backend sync endpoint now returns testId for direct navigation to test result
 3. **Fixed Supervisor Configuration** - Updated from Python uvicorn to NestJS npm run start:dev
+4. **Fixed Score Display on History Page** - Score now correctly reads from `results.webMetrics.performanceScore` or `seoScore`
+5. **Fixed Duration Display on History Page** - Duration now uses improved logic with `<1s` for quick tests
+6. **Fixed Issues Tab Data Mapping** - Issues tab now correctly displays SEO issues from `seoAnalysis.issues`
+7. **Fixed Rerun Test Autorun** - Added URL parameter handling so clicking "Rerun Test" automatically starts the test
 
 **Features Verified Working:**
-- Tests page: search filter, status/type/device dropdowns, score display, duration, export PDF, delete
-- Test Result page: rerun button, share, export PDF, dynamic tabs (Overview, Performance, SEO, Accessibility)
+- Tests page: search filter, status/type/device dropdowns, score display (85%), duration (<1s), export PDF, delete
+- Test Result page: rerun button (auto-starts test), share, export PDF, dynamic tabs (Overview, Performance, SEO, Accessibility)
+- Test Result SEO tab: score circles, category breakdown, recommendations, issues
+- History page: score display, duration, export CSV, filters
 - Scheduled Tests: create/edit modal, frequency selection, execution logs
 - Analytics: charts, metrics cards, export CSV/PDF
 - Dashboard: stats, recent tests, quick actions
 
 ## Pending Tasks
-- None - all reported bugs from user message #665 have been addressed
+- None - all reported bugs from user message #665 have been addressed and verified
 
 ## Future Enhancements
 - (P1) Dashboard Customization

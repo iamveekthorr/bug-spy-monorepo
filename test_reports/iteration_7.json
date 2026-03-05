@@ -1,0 +1,91 @@
+{
+  "summary": "Bug fix verification complete - All 5 bugs from handoff summary verified as fixed: React hook order, View Report redirect, Score/Duration display, Issues tab mapping, Rerun Test autorun.",
+  "mode": "update",
+  "baseline_commit": "0682c9d3996982c02cb91afcabde11e74c7e0a03",
+  "head_commit": "9ecf6e6d409d530ae74df40aa1537bf871daeaf8",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 2,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "notes": "Ran targeted bug fix verification tests. All bug fixes confirmed working."
+  },
+  "specs_updated": [
+    "/app/tests/e2e/dashboard-tests.spec.ts"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/auth-flow.spec.ts",
+    "/app/tests/e2e/dashboard-tests.spec.ts"
+  ],
+  "bug_fixes_verified": {
+    "react_hook_order": {
+      "status": "VERIFIED",
+      "description": "TestResultPage.tsx loads without React hook errors - page renders correctly with all tabs and buttons"
+    },
+    "view_report_redirect": {
+      "status": "VERIFIED",
+      "description": "View Report correctly redirects to test result page with testId from sync response"
+    },
+    "score_display_tests_page": {
+      "status": "VERIFIED",
+      "description": "Score displays correctly as 'Score: 85%' in Results column from results.webMetrics.performanceScore/seoScore"
+    },
+    "duration_display_tests_page": {
+      "status": "VERIFIED",
+      "description": "Duration displays correctly as '<1s' format in Duration column"
+    },
+    "score_display_history_page": {
+      "status": "VERIFIED",
+      "description": "Score displays correctly as '85%' (green) in Score column from results.webMetrics data"
+    },
+    "duration_display_history_page": {
+      "status": "VERIFIED",
+      "description": "Duration displays correctly as '<1s' in Duration column"
+    },
+    "seo_tab_score_categories": {
+      "status": "VERIFIED",
+      "description": "SEO tab shows score (74), categories (Meta Tags 52, Headings 85, Content 76, Technical 80), and sub-tabs"
+    },
+    "issues_tab_seo_analysis": {
+      "status": "VERIFIED",
+      "description": "Issues sub-tab displays actual issues from seoAnalysis.issues (e.g., 'META TAGS - Missing meta description')"
+    },
+    "rerun_test_autorun": {
+      "status": "VERIFIED",
+      "description": "Rerun Test button navigates to homepage with URL params (url, testType, deviceType, autorun=true) and automatically triggers test execution"
+    }
+  },
+  "features_verified": {
+    "login_flow": "PASS - Login modal opens with test@example.com / TestPass123!",
+    "dashboard_overview": "PASS - Welcome back message, stats cards, Recent Tests, Quick Actions visible",
+    "tests_page": "PASS - Tests heading, search filter, table with Score (85%) and Duration (<1s)",
+    "test_result_page": "PASS - Back button, Complete status, Rerun Test/Share/Export PDF buttons, tabs (Overview, Performance, SEO, Accessibility)",
+    "test_result_seo_tab": "PASS - SEO Score 74, categories, sub-tabs (Overview, Detailed Analysis, Recommendations, Issues)",
+    "test_result_issues_tab": "PASS - Shows actual SEO issues from seoAnalysis",
+    "history_page": "PASS - Test History heading, Export CSV, Score 85%, Duration <1s, filters",
+    "scheduled_tests_modal": "PASS - New Schedule modal with Schedule Name, Website URL, Test Type, Device, Frequency fields",
+    "analytics_page": "PASS - Analytics & Reports heading, Refresh, CSV/PDF export, Performance Trends chart, metrics cards"
+  },
+  "action_items": [],
+  "updated_files": [
+    "/app/tests/e2e/dashboard-tests.spec.ts"
+  ],
+  "success_rate": {
+    "backend": "100% (no backend changes)",
+    "frontend": "100% - all bug fixes verified working"
+  },
+  "seed_data_creation": "None - existing test data sufficient",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All bug fixes verified. Dashboard tests updated with more resilient login helper using networkidle wait and placeholder-based input selectors. Test for Rerun Test autorun functionality added. All tests passing when Cloudflare allows access."
+}

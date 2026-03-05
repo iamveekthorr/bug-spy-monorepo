@@ -2,13 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '/app/tests/e2e',
-  outputDir: '/root/.emergent/automation_output/20260305_211527/test-results',
+  outputDir: '/root/.emergent/automation_output/20260305_212648/test-results',
   timeout: 60000,
   retries: 0,
   workers: 1,
   reporter: [
     ['line'],
-    ['json', { outputFile: '/root/.emergent/automation_output/20260305_211527/results.json' }],
+    ['json', { outputFile: '/root/.emergent/automation_output/20260305_212648/results.json' }],
   ],
   use: {
     baseURL: 'https://lighthouse-reports.preview.emergentagent.com',
