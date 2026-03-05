@@ -154,8 +154,21 @@ const TestsPage = () => {
     if (!completedAt) return 'In progress';
     const start = new Date(createdAt);
     const end = new Date(completedAt);
-    const duration = Math.round((end.getTime() - start.getTime()) / 1000);
-    return `${duration}s`;
+    const durationMs = end.getTime() - start.getTime();
+    
+    // Handle edge case where times are the same or very close
+    if (durationMs <= 0) {
+      return '<1s';
+    }
+    
+    const seconds = Math.round(durationMs / 1000);
+    if (seconds < 60) {
+      return `${seconds}s`;
+    }
+    
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
   };
 
   const getPerformanceColor = (score?: number) => {

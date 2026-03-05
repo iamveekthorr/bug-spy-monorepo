@@ -165,7 +165,7 @@ Based on seoitis.com clean card-based design with original blue brand colors:
 ## Environment URLs
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8001
-- External Preview: https://web-audit-hub.preview.emergentagent.com
+- External Preview: https://lighthouse-reports.preview.emergentagent.com
 
 ## Key Files Modified for Redesign
 - `/app/frontend/src/index.css` - Blue color palette and utilities

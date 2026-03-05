@@ -269,6 +269,7 @@ export class UserService {
       let syncedCount = 0;
       let skippedCount = 0;
       let failedCount = 0;
+      let lastTestId: string | null = null;
 
       // Process each test
       for (const test of tests) {
@@ -287,13 +288,14 @@ export class UserService {
           }).lean().exec();
 
           if (existingTest) {
-            // Test already exists, skip it
+            // Test already exists, skip it but return its ID
             skippedCount++;
+            lastTestId = existingTest._id.toString();
             continue;
           }
 
           // Create test result document
-          await this.testResultModel.create({
+          const newTest = await this.testResultModel.create({
             userId: userObjectId,
             url: test.url,
             timestamp: testTimestamp,
@@ -306,6 +308,7 @@ export class UserService {
             completedAt: testTimestamp,
           });
 
+          lastTestId = newTest._id.toString();
           syncedCount++;
         } catch (error) {
           console.error('Failed to sync test:', error);
@@ -318,6 +321,7 @@ export class UserService {
         syncedCount,
         skippedCount,
         failedCount,
+        testId: lastTestId, // Return the last created/found test ID for redirect
       };
     } catch (error) {
       if (error instanceof AppError) {

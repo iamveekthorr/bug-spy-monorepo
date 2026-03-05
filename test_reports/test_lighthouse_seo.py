@@ -9,7 +9,7 @@ import requests
 import os
 import json
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://web-audit-hub.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://lighthouse-reports.preview.emergentagent.com')
 
 
 class TestPerformanceEndpoint:

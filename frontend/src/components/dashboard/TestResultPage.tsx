@@ -23,6 +23,7 @@ import {
   X,
   ZoomIn,
   Search,
+  Play,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,7 @@ import type { TestResult, ErrorReport } from '@/types';
 import { useTestById } from '@/hooks/useDashboard';
 import SeoResultsSection from './SeoResultsSection';
 import { exportSeoReportToPdf, exportPerformanceReportToPdf } from '@/utils/pdfExport';
+import { useToast } from '@/hooks/useToast';
 
 const TestStatusBadge = ({ status }: { status: string }) => {
   const statusConfig = {
@@ -325,6 +327,8 @@ const TestResultPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const toast = useToast();
+  const [isRerunning, setIsRerunning] = useState(false);
   
   // Fetch real test data from backend
   const { data: rawTest, isLoading, isError, error } = useTestById(id || '');
@@ -353,14 +357,19 @@ const TestResultPage = () => {
           ((rawMetrics.totalBlockingTime || 0) > 600 ? 20 : (rawMetrics.totalBlockingTime || 0) > 200 ? 10 : 0) -
           ((rawMetrics.cumulativeLayoutShift || 0) > 0.25 ? 15 : (rawMetrics.cumulativeLayoutShift || 0) > 0.1 ? 8 : 0)
         ),
+        accessibilityScore: rawMetrics.accessibilityScore || 0,
+        seoScore: rawMetrics.seoScore || rawTest.results?.webMetrics?.seoAnalysis?.score || 0,
+        bestPracticesScore: rawMetrics.bestPracticesScore || 0,
         opportunities: [],
       } : undefined,
-      // Map errors to expected format
-      errors: (rawTest.results.errors || []).map((err: string | { id: string; message: string }, index: number) => 
+      // Map errors to expected format from console errors
+      errors: (rawTest.results.consoleErrors?.errors?.javascript || rawTest.results.errors || []).map((err: string | { id: string; message: string }, index: number) => 
         typeof err === 'string' 
           ? { id: `error-${index}`, type: 'console', severity: 'medium' as const, message: err, timestamp: Date.now() }
           : err
       ),
+      // Map console errors specifically
+      consoleErrors: rawTest.results.consoleErrors || null,
       // Map screenshots to expected format
       screenshots: rawTest.results.screenshots?.urls?.map((url: string, index: number) => ({
         id: `screenshot-${index}`,
@@ -369,7 +378,15 @@ const TestResultPage = () => {
         timestamp: Date.now(),
         deviceType: rawTest.results?.screenshots?.deviceType || rawTest.deviceType || 'desktop',
       })) || [],
-      networkRequests: [],
+      // Map network stats
+      networkRequests: rawTest.results.webMetrics?.networkStats ? [{
+        totalRequests: rawTest.results.webMetrics.networkStats.totalRequests || 0,
+        totalSize: rawTest.results.webMetrics.networkStats.totalSize || 0,
+        http1: rawTest.results.webMetrics.networkStats.http1 || 0,
+        http2: rawTest.results.webMetrics.networkStats.http2 || 0,
+        http3: rawTest.results.webMetrics.networkStats.http3 || 0,
+      }] : [],
+      networkStats: rawTest.results.webMetrics?.networkStats || null,
     } : undefined,
   } : null;
 
@@ -456,6 +473,28 @@ const TestResultPage = () => {
   // Filter to only show tabs that have content (or are set to always show)
   const tabs = allTabs.filter(tab => tab.alwaysShow || tab.hasContent);
 
+  const handleRerunTest = async () => {
+    if (!test.url || !test.testType) {
+      toast.error('Cannot rerun test: missing URL or test type');
+      return;
+    }
+
+    setIsRerunning(true);
+    toast.info('Starting test rerun...');
+    
+    // Navigate to home page with test parameters pre-filled
+    navigate(`/?url=${encodeURIComponent(test.url)}&testType=${test.testType}&deviceType=${test.deviceType || 'desktop'}&autorun=true`);
+  };
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied to clipboard');
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -490,11 +529,22 @@ const TestResultPage = () => {
           </div>
           
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm">
-              <RefreshCw size={16} className="mr-2" />
-              Rerun Test
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleRerunTest}
+              disabled={isRerunning}
+              data-testid="rerun-test-btn"
+            >
+              <RefreshCw size={16} className={cn("mr-2", isRerunning && "animate-spin")} />
+              {isRerunning ? 'Rerunning...' : 'Rerun Test'}
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleShare}
+              data-testid="share-test-btn"
+            >
               <Share2 size={16} className="mr-2" />
               Share
             </Button>
@@ -510,6 +560,7 @@ const TestResultPage = () => {
                   }
                 }
               }}
+              data-testid="export-pdf-btn"
             >
               <Download size={16} className="mr-2" />
               Export PDF
@@ -759,23 +810,146 @@ const TestResultPage = () => {
 
           {/* Add other tab contents as needed */}
           {activeTab === 'network' && (
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Network Requests</h3>
-              <p className="text-gray-500">Network request details would be displayed here.</p>
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold mb-4">Network Analysis</h3>
+              {test.results?.networkStats ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-500">Total Requests</h4>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      {test.results.networkStats.totalRequests || 0}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-500">Total Size</h4>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      {((test.results.networkStats.totalSize || 0) / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-500">HTTP/2 Requests</h4>
+                    <p className="text-2xl font-bold text-green-600 mt-1">
+                      {test.results.networkStats.http2 || 0}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-500">HTTP/1.1 Requests</h4>
+                    <p className="text-2xl font-bold text-yellow-600 mt-1">
+                      {test.results.networkStats.http1 || 0}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Network size={48} className="mx-auto text-gray-400 mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">No Network Data</h4>
+                  <p className="text-gray-500">Network analysis data is not available for this test.</p>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === 'console' && (
-            <div>
+            <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4">Console Messages</h3>
-              <p className="text-gray-500">Console messages would be displayed here.</p>
+              {test.results?.consoleErrors ? (
+                <div className="space-y-4">
+                  {/* JavaScript Errors */}
+                  {test.results.consoleErrors.errors?.javascript?.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-red-600 mb-2">JavaScript Errors ({test.results.consoleErrors.errors.javascript.length})</h4>
+                      <div className="space-y-2">
+                        {test.results.consoleErrors.errors.javascript.slice(0, 10).map((err: any, i: number) => (
+                          <div key={i} className="bg-red-50 border border-red-100 rounded p-3 text-sm">
+                            <p className="text-red-800 font-mono">{err.text || err}</p>
+                            {err.url && <p className="text-red-600 text-xs mt-1">Source: {err.url}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Network Errors */}
+                  {test.results.consoleErrors.errors?.network?.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-orange-600 mb-2">Network Errors ({test.results.consoleErrors.errors.network.length})</h4>
+                      <div className="space-y-2">
+                        {test.results.consoleErrors.errors.network.slice(0, 10).map((err: any, i: number) => (
+                          <div key={i} className="bg-orange-50 border border-orange-100 rounded p-3 text-sm">
+                            <p className="text-orange-800 font-mono">{err.text || err}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Summary */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-2xl font-bold text-red-600">{test.results.consoleErrors.errors?.javascript?.length || 0}</p>
+                        <p className="text-xs text-gray-500">JS Errors</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-orange-600">{test.results.consoleErrors.errors?.network?.length || 0}</p>
+                        <p className="text-xs text-gray-500">Network Errors</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-gray-600">{test.results.consoleErrors.errors?.other?.length || 0}</p>
+                        <p className="text-xs text-gray-500">Other</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <CheckCircle size={48} className="mx-auto text-green-500 mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">No Console Errors</h4>
+                  <p className="text-gray-500">No console errors were detected during the test.</p>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === 'accessibility' && (
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Accessibility Issues</h3>
-              <p className="text-gray-500">Accessibility analysis would be displayed here.</p>
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold mb-4">Accessibility Analysis</h3>
+              {test.results?.performanceMetrics?.accessibilityScore ? (
+                <div className="space-y-6">
+                  {/* Score Display */}
+                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-xl flex items-center">
+                    <div className={cn(
+                      'w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold',
+                      test.results.performanceMetrics.accessibilityScore >= 90 ? 'bg-green-100 text-green-600' :
+                      test.results.performanceMetrics.accessibilityScore >= 70 ? 'bg-yellow-100 text-yellow-600' :
+                      'bg-red-100 text-red-600'
+                    )}>
+                      {test.results.performanceMetrics.accessibilityScore}
+                    </div>
+                    <div className="ml-6">
+                      <h3 className="text-xl font-bold text-gray-900">Accessibility Score</h3>
+                      <p className="text-gray-600 mt-1">
+                        {test.results.performanceMetrics.accessibilityScore >= 90 ? 'Excellent accessibility!' :
+                         test.results.performanceMetrics.accessibilityScore >= 70 ? 'Good, but can be improved.' :
+                         'Needs accessibility improvements.'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Best Practices Score if available */}
+                  {test.results.performanceMetrics.bestPracticesScore > 0 && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-gray-900 mb-2">Best Practices Score</h4>
+                      <p className="text-2xl font-bold text-blue-600">{test.results.performanceMetrics.bestPracticesScore}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <UserCheck size={48} className="mx-auto text-gray-400 mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">No Accessibility Data</h4>
+                  <p className="text-gray-500">Run a performance test to get accessibility analysis.</p>
+                </div>
+              )}
             </div>
           )}
         </div>

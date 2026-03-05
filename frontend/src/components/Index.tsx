@@ -463,6 +463,16 @@ const Index = () => {
 
                   if (!metrics.metrics) return 50;
 
+                  // Check if backend provided a performanceScore
+                  if (metrics.performanceScore && metrics.performanceScore > 0) {
+                    return metrics.performanceScore;
+                  }
+                  
+                  // Check if backend provided a seoScore for SEO tests
+                  if (metrics.seoScore && metrics.seoScore > 0) {
+                    return metrics.seoScore;
+                  }
+
                   let score = 100;
                   const m = metrics.metrics;
 
@@ -690,9 +700,9 @@ const Index = () => {
                             )}
                             {critical === 0 && warnings === 0 && good === 0 && (
                               <div className="flex items-center gap-1.5">
-                                <div className="size-2 sm:size-2.5 rounded-full bg-gray-400"></div>
+                                <div className="size-2 sm:size-2.5 rounded-full bg-blue-500"></div>
                                 <span className="text-xs sm:text-sm text-gray-600">
-                                  No metrics available
+                                  Test complete
                                 </span>
                               </div>
                             )}

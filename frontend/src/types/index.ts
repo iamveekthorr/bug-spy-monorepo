@@ -138,6 +138,17 @@ export interface TestSchedule {
   isActive: boolean;
   nextRun: string;
   lastRun?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  runTime?: string; // Specific time to run (HH:mm format)
+  timezone?: string;
+  executionLogs?: {
+    timestamp: string;
+    status: 'success' | 'failed' | 'running';
+    message?: string;
+    testId?: string;
+    duration?: number;
+  }[];
 }
 
 // UI Component Types
