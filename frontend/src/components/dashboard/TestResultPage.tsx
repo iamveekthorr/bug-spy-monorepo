@@ -459,14 +459,15 @@ const TestResultPage = () => {
   };
 
   // Dynamic tabs - only show tabs with actual content
+  const issues = test.results?.errors || test.results?.webMetrics?.seoAnalysis?.issues || [];
   const allTabs = [
     { id: 'overview', name: 'Overview', icon: FileText, alwaysShow: true },
     { id: 'performance', name: 'Performance', icon: Clock, alwaysShow: true },
     { id: 'seo', name: 'SEO', icon: Search, hasContent: test.testType === 'seo' || !!test.results?.webMetrics?.seoAnalysis },
-    { id: 'errors', name: 'Issues', icon: AlertTriangle, count: test.results?.errors?.length || 0, hasContent: (test.results?.errors?.length || 0) > 0 },
+    { id: 'errors', name: 'Issues', icon: AlertTriangle, count: issues.length, hasContent: issues.length > 0 },
     { id: 'screenshots', name: 'Screenshots', icon: Eye, hasContent: test.results?.screenshots && Object.keys(test.results.screenshots).length > 0 },
     { id: 'network', name: 'Network', icon: Network, hasContent: !!test.results?.webMetrics?.networkStats },
-    { id: 'console', name: 'Console', icon: Terminal, hasContent: !!test.results?.consoleErrors },
+    { id: 'console', name: 'Console', icon: Terminal, hasContent: (test.results?.consoleErrors?.length || 0) > 0 },
     { id: 'accessibility', name: 'Accessibility', icon: UserCheck, hasContent: !!test.results?.webMetrics?.accessibilityScore },
   ];
   
@@ -743,10 +744,35 @@ const TestResultPage = () => {
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold mb-4">Issues Detected</h3>
-                {test.results?.errors && test.results.errors.length > 0 ? (
+                {issues.length > 0 ? (
                   <div className="space-y-4">
-                    {test.results.errors.map((error) => (
-                      <ErrorItem key={error.id} error={error} />
+                    {issues.map((issue: any, index: number) => (
+                      <div key={index} className="p-4 bg-white border rounded-lg shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className={cn(
+                            "flex-shrink-0 mt-0.5",
+                            issue.severity === 'critical' || issue.severity === 'error' ? 'text-red-500' :
+                            issue.severity === 'warning' ? 'text-yellow-500' : 'text-blue-500'
+                          )} size={20} />
+                          <div>
+                            <h4 className="font-medium text-gray-900">
+                              {issue.title || issue.source || 'Issue'}
+                            </h4>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {issue.description || issue.message}
+                            </p>
+                            {issue.impact && (
+                              <span className={cn(
+                                "inline-block mt-2 px-2 py-0.5 text-xs rounded-full",
+                                issue.impact === 'high' ? 'bg-red-100 text-red-700' :
+                                issue.impact === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'
+                              )}>
+                                {issue.impact} impact
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 ) : (

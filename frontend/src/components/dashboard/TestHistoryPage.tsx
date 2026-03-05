@@ -78,8 +78,21 @@ const TestHistoryPage = () => {
     if (!completedAt) return 'In progress';
     const start = new Date(createdAt);
     const end = new Date(completedAt);
-    const duration = Math.round((end.getTime() - start.getTime()) / 1000);
-    return `${duration}s`;
+    const durationMs = end.getTime() - start.getTime();
+    
+    // Handle edge case where times are the same or very close
+    if (durationMs <= 0) {
+      return '<1s';
+    }
+    
+    const seconds = Math.round(durationMs / 1000);
+    if (seconds < 60) {
+      return `${seconds}s`;
+    }
+    
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
   };
 
   const getPerformanceColor = (score?: number) => {
@@ -99,18 +112,21 @@ const TestHistoryPage = () => {
 
   const exportData = () => {
     const csvContent = [
-      ['URL', 'Status', 'Test Type', 'Device', 'Created At', 'Duration', 'Performance Score'].join(','),
-      ...filteredTests.map((test: any) =>
-        [
+      ['URL', 'Status', 'Test Type', 'Device', 'Created At', 'Duration', 'Score'].join(','),
+      ...filteredTests.map((test: any) => {
+        const score = test.performanceScore || 
+          test.results?.webMetrics?.performanceScore || 
+          test.results?.webMetrics?.seoScore || 'N/A';
+        return [
           test.url,
           test.status,
           test.testType,
           test.deviceType,
           formatDate(test.createdAt),
           formatDuration(test.createdAt, test.completedAt),
-          test.performanceScore || 'N/A',
-        ].join(',')
-      ),
+          score,
+        ].join(',');
+      }),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -282,18 +298,23 @@ const TestHistoryPage = () => {
                         {formatDuration(test.createdAt, test.completedAt)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {(test as any).performanceScore ? (
-                          <span
-                            className={cn(
-                              'text-sm font-medium',
-                              getPerformanceColor((test as any).performanceScore)
-                            )}
-                          >
-                            {(test as any).performanceScore}%
-                          </span>
-                        ) : (
-                          <span className="text-sm text-gray-500">N/A</span>
-                        )}
+                        {(() => {
+                          const score = (test as any).performanceScore || 
+                            test.results?.webMetrics?.performanceScore || 
+                            test.results?.webMetrics?.seoScore;
+                          return score ? (
+                            <span
+                              className={cn(
+                                'text-sm font-medium',
+                                getPerformanceColor(score)
+                              )}
+                            >
+                              {score}%
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-500">N/A</span>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <Link to={`/dashboard/tests/${test.id}`}>
