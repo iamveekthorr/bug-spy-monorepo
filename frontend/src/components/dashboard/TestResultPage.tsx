@@ -448,8 +448,30 @@ const TestResultPage = () => {
     if (!completedAt) return 'In progress';
     const start = new Date(createdAt);
     const end = new Date(completedAt);
-    const duration = Math.round((end.getTime() - start.getTime()) / 1000);
-    return `${duration} seconds`;
+    const durationMs = end.getTime() - start.getTime();
+    
+    // Handle edge case where times are the same or very close
+    if (durationMs <= 0) {
+      return '<1 second';
+    }
+    
+    const seconds = Math.round(durationMs / 1000);
+    if (seconds < 1) {
+      return '<1 second';
+    }
+    if (seconds === 1) {
+      return '1 second';
+    }
+    if (seconds < 60) {
+      return `${seconds} seconds`;
+    }
+    
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes === 1) {
+      return remainingSeconds > 0 ? `1 minute ${remainingSeconds} seconds` : '1 minute';
+    }
+    return remainingSeconds > 0 ? `${minutes} minutes ${remainingSeconds} seconds` : `${minutes} minutes`;
   };
 
   const getPerformanceStatus = (score: number) => {

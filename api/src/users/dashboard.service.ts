@@ -687,7 +687,11 @@ export class DashboardService {
           trendsByDate.set(dateKey, { scores: [], count: 0 });
         }
         const entry = trendsByDate.get(dateKey)!;
-        entry.scores.push(test.performanceScore || 0);
+        // Get score from multiple sources
+        const score = test.performanceScore || 
+          test.results?.webMetrics?.performanceScore || 
+          test.results?.webMetrics?.seoScore || 0;
+        entry.scores.push(score);
         entry.count++;
       });
 
@@ -753,7 +757,12 @@ export class DashboardService {
 
       // Calculate overall average
       const averagePerformanceScore = tests.length > 0
-        ? Math.round(tests.reduce((sum, t) => sum + (t.performanceScore || 0), 0) / tests.length)
+        ? Math.round(tests.reduce((sum, t) => {
+            const score = t.performanceScore || 
+              t.results?.webMetrics?.performanceScore || 
+              t.results?.webMetrics?.seoScore || 0;
+            return sum + score;
+          }, 0) / tests.length)
         : 0;
 
       return {
