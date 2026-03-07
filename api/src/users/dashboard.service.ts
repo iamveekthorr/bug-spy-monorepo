@@ -59,10 +59,9 @@ export class DashboardService {
         .find({
           userId: userObjectId,
           status: 'completed',
-          'results.webMetrics.metrics': { $exists: true },
           isArchived: { $ne: true },
         })
-        .select('results.webMetrics.metrics performanceScore')
+        .select('results.webMetrics performanceScore')
         .lean()
         .exec();
 
@@ -75,26 +74,37 @@ export class DashboardService {
               return test.performanceScore;
             }
 
+            // Check for score in webMetrics
+            const webMetrics = test.results?.webMetrics;
+            if (webMetrics?.performanceScore !== undefined) {
+              return webMetrics.performanceScore;
+            }
+            if (webMetrics?.seoScore !== undefined) {
+              return webMetrics.seoScore;
+            }
+
             // Otherwise calculate from metrics
-            const fcp =
-              test.results?.webMetrics?.metrics?.firstContentfulPaint || 0;
-            const lcp =
-              test.results?.webMetrics?.metrics?.largestContentfulPaint || 0;
-            const tbt = test.results?.webMetrics?.metrics?.totalBlockingTime || 0;
-            const cls =
-              test.results?.webMetrics?.metrics?.cumulativeLayoutShift || 0;
+            const metrics = webMetrics?.metrics;
+            if (metrics) {
+              const fcp = metrics.firstContentfulPaint || 0;
+              const lcp = metrics.largestContentfulPaint || 0;
+              const tbt = metrics.totalBlockingTime || 0;
+              const cls = metrics.cumulativeLayoutShift || 0;
 
-            let score = 100;
-            if (fcp > 3000) score -= 15;
-            else if (fcp > 1800) score -= 7;
-            if (lcp > 4000) score -= 20;
-            else if (lcp > 2500) score -= 10;
-            if (tbt > 600) score -= 20;
-            else if (tbt > 200) score -= 10;
-            if (cls > 0.25) score -= 15;
-            else if (cls > 0.1) score -= 8;
+              let score = 100;
+              if (fcp > 3000) score -= 15;
+              else if (fcp > 1800) score -= 7;
+              if (lcp > 4000) score -= 20;
+              else if (lcp > 2500) score -= 10;
+              if (tbt > 600) score -= 20;
+              else if (tbt > 200) score -= 10;
+              if (cls > 0.25) score -= 15;
+              else if (cls > 0.1) score -= 8;
 
-            return Math.max(0, Math.min(100, score));
+              return Math.max(0, Math.min(100, score));
+            }
+
+            return 0;
           })
           .filter((score) => score > 0);
 

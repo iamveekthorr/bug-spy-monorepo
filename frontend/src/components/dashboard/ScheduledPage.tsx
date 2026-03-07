@@ -37,6 +37,7 @@ const scheduleSchema = z.object({
   name: z.string().min(1, 'Schedule name is required'),
   url: z.string().url('Please enter a valid URL'),
   frequency: z.enum(['hourly', 'daily', 'weekly', 'monthly']),
+  time: z.string().optional(), // Time to run the test (HH:MM)
   testType: z.string().min(1, 'Test type is required'),
   deviceType: z.string().min(1, 'Device type is required'),
 });
@@ -474,6 +475,20 @@ const ScheduledPage = () => {
                   <SelectItem value="monthly">Every month</SelectItem>
                 </SelectContent>
               </Select>
+            </Field>
+
+            <Field>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Time to Run
+              </label>
+              <Input
+                type="time"
+                {...form.register('time')}
+                className="w-full"
+                defaultValue="09:00"
+                data-testid="schedule-time-input"
+              />
+              <p className="text-xs text-gray-500 mt-1">Select the time to run the scheduled test</p>
             </Field>
 
             <div className="flex justify-end space-x-3 mt-6">

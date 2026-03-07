@@ -337,7 +337,8 @@ const TestResultPage = () => {
   // Backend can return metrics in two formats:
   // 1. webMetrics.performanceMetrics (new format from web-metrics.service.ts)
   // 2. webMetrics.metrics (old format stored in database)
-  const rawMetrics = rawTest?.results?.webMetrics?.performanceMetrics || rawTest?.results?.webMetrics?.metrics;
+  // Get raw metrics data - handle multiple possible data structures
+  const rawMetrics = rawTest?.results?.webMetrics || rawTest?.results?.performanceMetrics;
   
   const test = rawTest ? {
     ...rawTest,
@@ -345,29 +346,28 @@ const TestResultPage = () => {
       ...rawTest.results,
       // Map webMetrics to performanceMetrics for component compatibility
       performanceMetrics: rawMetrics ? {
-        firstContentfulPaint: (rawMetrics.firstContentfulPaint || 0) / 1000, // ms to seconds
-        largestContentfulPaint: (rawMetrics.largestContentfulPaint || 0) / 1000,
-        cumulativeLayoutShift: rawMetrics.cumulativeLayoutShift || 0,
-        totalBlockingTime: rawMetrics.totalBlockingTime || 0,
-        speedIndex: (rawMetrics.speedIndex || 0) / 1000,
-        performanceScore: rawMetrics.performanceScore || rawTest.performanceScore || Math.round(
-          100 - 
-          ((rawMetrics.firstContentfulPaint || 0) > 3000 ? 15 : (rawMetrics.firstContentfulPaint || 0) > 1800 ? 7 : 0) -
-          ((rawMetrics.largestContentfulPaint || 0) > 4000 ? 20 : (rawMetrics.largestContentfulPaint || 0) > 2500 ? 10 : 0) -
-          ((rawMetrics.totalBlockingTime || 0) > 600 ? 20 : (rawMetrics.totalBlockingTime || 0) > 200 ? 10 : 0) -
-          ((rawMetrics.cumulativeLayoutShift || 0) > 0.25 ? 15 : (rawMetrics.cumulativeLayoutShift || 0) > 0.1 ? 8 : 0)
-        ),
+        firstContentfulPaint: (rawMetrics.firstContentfulPaint || rawMetrics.metrics?.firstContentfulPaint || 0) / 1000, // ms to seconds
+        largestContentfulPaint: (rawMetrics.largestContentfulPaint || rawMetrics.metrics?.largestContentfulPaint || 0) / 1000,
+        cumulativeLayoutShift: rawMetrics.cumulativeLayoutShift || rawMetrics.metrics?.cumulativeLayoutShift || 0,
+        totalBlockingTime: rawMetrics.totalBlockingTime || rawMetrics.metrics?.totalBlockingTime || 0,
+        speedIndex: (rawMetrics.speedIndex || rawMetrics.metrics?.speedIndex || 0) / 1000,
+        performanceScore: rawMetrics.performanceScore || rawTest.performanceScore || 0,
         accessibilityScore: rawMetrics.accessibilityScore || 0,
-        seoScore: rawMetrics.seoScore || rawTest.results?.webMetrics?.seoAnalysis?.score || 0,
+        seoScore: rawMetrics.seoScore || rawMetrics.seoAnalysis?.score || 0,
         bestPracticesScore: rawMetrics.bestPracticesScore || 0,
         opportunities: [],
       } : undefined,
-      // Map errors to expected format from console errors
-      errors: (rawTest.results.consoleErrors?.errors?.javascript || rawTest.results.errors || []).map((err: string | { id: string; message: string }, index: number) => 
-        typeof err === 'string' 
-          ? { id: `error-${index}`, type: 'console', severity: 'medium' as const, message: err, timestamp: Date.now() }
-          : err
-      ),
+      // Map errors to expected format - check multiple sources
+      errors: (() => {
+        const consoleErrors = rawTest.results.consoleErrors?.errors?.javascript || [];
+        const seoIssues = rawTest.results.webMetrics?.seoAnalysis?.issues || [];
+        const allErrors = [...consoleErrors, ...seoIssues];
+        return allErrors.map((err: any, index: number) => 
+          typeof err === 'string' 
+            ? { id: `error-${index}`, type: 'console', severity: 'medium' as const, message: err, timestamp: Date.now() }
+            : { id: `error-${index}`, type: err.source || 'issue', severity: err.severity || 'medium', message: err.message || err.description, timestamp: Date.now() }
+        );
+      })(),
       // Map console errors specifically
       consoleErrors: rawTest.results.consoleErrors || null,
       // Map screenshots to expected format

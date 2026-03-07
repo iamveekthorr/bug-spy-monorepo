@@ -31,13 +31,16 @@ export class TestSchedule {
   })
   frequency: 'hourly' | 'daily' | 'weekly' | 'monthly';
 
+  @Prop({ type: String, default: '09:00' })
+  time?: string; // Time to run (HH:MM format)
+
   @Prop({
     required: true,
     type: String,
-    enum: ['performance', 'screenshot', 'cookie'],
+    enum: ['performance', 'screenshot', 'cookie', 'seo'],
     default: 'performance',
   })
-  testType: 'performance' | 'screenshot' | 'cookie';
+  testType: 'performance' | 'screenshot' | 'cookie' | 'seo';
 
   @Prop({
     required: true,
@@ -79,6 +82,15 @@ export class TestSchedule {
 
   @Prop({ type: Number, default: 0 })
   failedRuns: number;
+
+  @Prop({ type: Array, default: [] })
+  executionLogs?: Array<{
+    timestamp: Date;
+    status: 'success' | 'failed' | 'running';
+    message?: string;
+    testId?: string;
+    duration?: number;
+  }>;
 
   createdAt: Date;
   updatedAt: Date;
