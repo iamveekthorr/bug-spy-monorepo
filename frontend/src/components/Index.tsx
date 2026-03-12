@@ -480,10 +480,12 @@ const Index = () => {
                     typeof results !== 'object' ||
                     !('webMetrics' in results)
                   ) {
-                    return 50; // Default if no metrics
+                    return null; // No score available
                   }
 
-                  const metrics = results.webMetrics as {
+                  const webMetrics = results.webMetrics as {
+                    performanceScore?: number;
+                    seoScore?: number;
                     metrics?: {
                       firstContentfulPaint?: number;
                       largestContentfulPaint?: number;
@@ -492,20 +494,21 @@ const Index = () => {
                     };
                   };
 
-                  if (!metrics.metrics) return 50;
-
-                  // Check if backend provided a performanceScore
-                  if (metrics.performanceScore && metrics.performanceScore > 0) {
-                    return metrics.performanceScore;
+                  // First check for direct score from backend
+                  if (webMetrics.performanceScore && webMetrics.performanceScore > 0) {
+                    return webMetrics.performanceScore;
                   }
                   
-                  // Check if backend provided a seoScore for SEO tests
-                  if (metrics.seoScore && metrics.seoScore > 0) {
-                    return metrics.seoScore;
+                  // Check for SEO score for SEO tests
+                  if (webMetrics.seoScore && webMetrics.seoScore > 0) {
+                    return webMetrics.seoScore;
                   }
 
+                  // Calculate from metrics if available
+                  if (!webMetrics.metrics) return null;
+
                   let score = 100;
-                  const m = metrics.metrics;
+                  const m = webMetrics.metrics;
 
                   // FCP scoring (Good: <1.8s, Needs Improvement: 1.8-3s, Poor: >3s)
                   if (m.firstContentfulPaint) {
@@ -613,7 +616,8 @@ const Index = () => {
                 const { critical, warnings, good } = countIssues();
 
                 // Determine score color
-                const getScoreColor = (score: number) => {
+                const getScoreColor = (score: number | null) => {
+                  if (score === null) return { stroke: '#9ca3af', text: 'text-gray-500' }; // No score
                   if (score >= 90)
                     return { stroke: '#10b981', text: 'text-emerald-600' }; // Excellent
                   if (score >= 70)
@@ -622,6 +626,7 @@ const Index = () => {
                 };
 
                 const scoreColors = getScoreColor(score);
+                const displayScore = score !== null ? score : 0;
                 const circumference = 314; // 2 * PI * 50
 
                 return (
@@ -669,7 +674,7 @@ const Index = () => {
                               fill="none"
                               stroke={scoreColors.stroke}
                               strokeWidth="8"
-                              strokeDasharray={`${(score / 100) * circumference} ${circumference}`}
+                              strokeDasharray={`${(displayScore / 100) * circumference} ${circumference}`}
                               strokeLinecap="round"
                               className="transition-all duration-1000 ease-out"
                               style={{
@@ -684,7 +689,7 @@ const Index = () => {
                                 scoreColors.text,
                               )}
                             >
-                              {score}
+                              {score !== null ? score : '--'}
                             </span>
                             <span className="text-xs text-gray-500">/100</span>
                           </div>

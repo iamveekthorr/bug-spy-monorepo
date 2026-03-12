@@ -36,9 +36,18 @@ export const schedulesAPI = {
   /**
    * Get all schedules for the current user
    */
-  async getSchedules(): Promise<SchedulesResponse> {
-    const response = await api.get<SchedulesResponse>('/dashboard/schedules');
-    return response.data;
+  async getSchedules(): Promise<Schedule[]> {
+    const response = await api.get('/dashboard/schedules');
+    // Handle both array and object responses
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return data;
+    }
+    // If data is an object with numeric keys, convert to array
+    if (data && typeof data === 'object') {
+      return Object.values(data);
+    }
+    return [];
   },
 
   /**
