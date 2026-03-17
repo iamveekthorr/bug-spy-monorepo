@@ -477,18 +477,19 @@ const ScheduledPage = () => {
               </Select>
             </Field>
 
+            {/* Time field for scheduling - v2 */}
             <Field>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time to Run
+                Run Time
               </label>
               <Input
                 type="time"
                 {...form.register('time')}
-                className="w-full"
+                className="w-full border-gray-300 rounded-md"
                 defaultValue="09:00"
-                data-testid="schedule-time-input"
+                data-testid="schedule-run-time"
               />
-              <p className="text-xs text-gray-500 mt-1">Select the time to run the scheduled test</p>
+              <p className="text-xs text-gray-500 mt-1">When should this test run each {form.watch('frequency') || 'day'}?</p>
             </Field>
 
             <div className="flex justify-end space-x-3 mt-6">
